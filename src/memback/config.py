@@ -1,11 +1,18 @@
+import os
 from pathlib import Path
 
-# Repo root: src/memback/config.py -> memback/ -> src/ -> <repo root>
-REPO_ROOT = Path(__file__).resolve().parents[2]
+PACKAGE_ROOT = Path(__file__).resolve().parent
 
-DATA_DIR = REPO_ROOT / "data"
+DATA_DIR = PACKAGE_ROOT / "data"
+MODEL_DIR = PACKAGE_ROOT / "model"
 
-model_path = str(REPO_ROOT / "model" / "memback_0.1.1_state_dict.pt")
+_ENV_ROOT = os.environ.get("MEMBACK_ROOT")
+if _ENV_ROOT:
+    _root = Path(_ENV_ROOT).expanduser().resolve()
+    DATA_DIR = _root / "data"
+    MODEL_DIR = _root / "model"
+
+model_path = str(MODEL_DIR / "memback_0.1.1_state_dict.pt")
 hdb_path = str(DATA_DIR / "hdb" / "lipid.hdb")
 charmm_ff_path = str(DATA_DIR / "forcefields" / "charmm36-feb2026_cgenff-5.0.ff")
 rtp_path = str(Path(charmm_ff_path) / "lipid.rtp")
@@ -13,6 +20,20 @@ itp_db_path = str(DATA_DIR / "charmm_lipid_itps")
 itp_m3_db_path = str(DATA_DIR / "m3_itps")
 map_path = str(DATA_DIR / "maps" / "all_maps.map")
 bond_map_path = str(DATA_DIR / "maps" / "all_maps.bnd")
+
+
+def check_data_files():
+    """Return a list of required data paths that are missing (empty if all present)."""
+    required = {
+        "model checkpoint": model_path,
+        "hydrogen database": hdb_path,
+        "CHARMM36 force field": charmm_ff_path,
+        "CHARMM lipid .itp database": itp_db_path,
+        "AA->CG map": map_path,
+        "CG bond map": bond_map_path,
+    }
+    return [f"{label}: {path}" for label, path in required.items() if not Path(path).exists()]
+
 
 bead_classes = {'C': 0, 'N': 1, 'P': 2, 'Q': 3, 'W': 4, 'X': 5, 'D': 6, 'UNK': 7}
 
