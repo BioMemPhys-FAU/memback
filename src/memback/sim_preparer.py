@@ -66,7 +66,9 @@ def sim_preparer(metadata, output_path, pred_path=None, ext_path=None):
 
     min_mdp_prep(output_path)
     if pred_path is not None:
-        shutil.copy2(pred_path, f"{output_path}")
+        destination = os.path.join(output_path, os.path.basename(pred_path))
+        if os.path.abspath(pred_path) != os.path.abspath(destination):
+            shutil.copy2(pred_path, destination)
         run_sh = f"#!/bin/bash \ngmx grompp -f min.mdp -c {os.path.basename(pred_path)} -r {os.path.basename(pred_path)} -p topol.top -o min.tpr \ngmx mdrun -v -deffnm min"
         with open(f"{output_path}/run_min.sh", "w") as f:
             f.write(run_sh)

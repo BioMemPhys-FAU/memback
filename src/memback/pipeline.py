@@ -1,16 +1,18 @@
-import torch
+import os
 import time
+from pathlib import Path
+
 import numpy as np
+import torch
 import MDAnalysis as mda
 from MDAnalysis.coordinates.memory import MemoryReader
 from torch_geometric.data import Batch, Data
 from torch_geometric.utils import unbatch
 
 from memback.models.equivariant_memback import EquivariantBackmap
-__all__ = ["EquivariantBackmap"]
-
 from memback.io.itp_to_hdb import itp_dir_to_hdb
-from memback.config import itp_db_path, hdb_path, martini3_to_charmm_lipids, map_path, bond_map_path, model_path
+from memback.config import (itp_db_path, hdb_path, martini3_to_charmm_lipids,
+                            map_path, bond_map_path, model_path as default_model_path)
 from memback.helpers import map_reader_full, calculate_distance, prepare_residue_data_prod_v2, read_bnd
 from memback.structure_repair.hydrogen_adder_gmx import place_hydrogens
 from memback.structure_repair.replace_water import replace_martini_water
@@ -19,7 +21,8 @@ from memback.sim_preparer import sim_preparer
 from memback.structure_repair.fix_clashes import fix_clashes
 from memback.structure_repair.fix_chirality import fix_chirality
 from memback.io.read_sim_metadata import read_hdb, read_itp_directory
-import os
+
+__all__ = ["backmapping", "EquivariantBackmap"]
 
 
 def universe_creator(result, mapping, dimensions):
@@ -28,7 +31,8 @@ def universe_creator(result, mapping, dimensions):
     residues = result['pred_data']
     pred_aa_pos = result['pred_result']
     # Universe metadata
-    n_frames = len(result)
+    # Single-frame pipeline: one frame is built below and handed to MemoryReader.
+    n_frames = 1
     n_atoms = 0
     topo_dict = {
         "resnames": [],
@@ -90,7 +94,7 @@ def prediction(model, data, mapping, device, no_universe=False):
     print(f"Prediction took {e - s:.2f} seconds.")
     return u
 
-def input_handler_single_frame(cg_universe, mapping, bnd_map, ext_itp=None):
+def input_handler_single_frame(cg_universe, mapping, bnd_map):
     """
     Uses only single frame (.gro/.pdb)
     """
@@ -163,9 +167,16 @@ def handle_mapping_extension(ext_path, mapping, bnd_map, hdb):
             print(f"Reading bond file {bnd_file} from extension folder.")
             bnd_map_ext.update(read_bnd(f"{ext_path}/{bnd_file}"))
 
+    hdb_ext = {}
     if len(itp_files) > 0:
-        itp_dir_to_hdb(ext_path, f"{ext_path}/ext_hdb.hdb", itp_files)
-    hdb_ext = read_hdb(f"{ext_path}/ext_hdb.hdb")
+        ext_hdb_path = f"{ext_path}/ext_hdb.hdb"
+        itp_dir_to_hdb(ext_path, ext_hdb_path, itp_files)
+        hdb_ext = read_hdb(ext_hdb_path)
+    else:
+        print(f"No .itp files in extension folder {ext_path}; skipping hydrogen database extension.")
+
+    if not (map_files or bnd_files or itp_files):
+        print(f"WARNING: extension folder {ext_path} contains no .map, .bnd or .itp files.")
 
     mapping.update(mapping_ext)
     bnd_map.update(bnd_map_ext)
@@ -178,10 +189,25 @@ def get_torch_device():
     return torch.device("cpu")
 
 
-def backmapping(input_path, model_path, filename, ext_path=None):
+def backmapping(input_path, model_path=None, filename=None, ext_path=None, device=None):
+    """
+    Backmap a single-frame coarse-grained structure to all-atom.
+
+    input_path : CG structure readable by MDAnalysis (.gro, .pdb, ...)
+    model_path : checkpoint; defaults to the version shipped in model/
+    filename   : output directory; defaults to <input stem>_backmapped
+    ext_path   : optional directory of extra .map / .bnd / .itp files
+    device     : torch.device; defaults to CUDA when available
+    """
+    if model_path is None:
+        model_path = default_model_path
+    if filename is None:
+        filename = f"{Path(input_path).stem}_backmapped"
+    if device is None:
+        device = get_torch_device()
+
     os.makedirs(filename, exist_ok=True)
     start_time = time.time()
-    device = get_torch_device()
     mapping = map_reader_full(map_path)
     bnd_map = read_bnd(bond_map_path)
     hdb = read_hdb(hdb_path)
@@ -195,7 +221,7 @@ def backmapping(input_path, model_path, filename, ext_path=None):
         if resname in martini3_to_charmm_lipids:
             input_uni.select_atoms(f"resname {resname}").residues.resnames = martini3_to_charmm_lipids[resname]
 
-    input_data = input_handler_single_frame(input_uni, mapping, bnd_map, ext_itp=ext_path)
+    input_data = input_handler_single_frame(input_uni, mapping, bnd_map)
     model = EquivariantBackmap.from_checkpoint(model_path, map_location=device)
     res_uni = prediction(model, input_data, mapping, device)
     itp = read_itp_directory(itp_db_path, np.unique(res_uni.residues.resnames))
@@ -205,11 +231,10 @@ def backmapping(input_path, model_path, filename, ext_path=None):
     res_uni_hydro = place_hydrogens(res_uni, hdb, itp)
     fix_chirality(res_uni_hydro, itp)
     res_uni_hydro = fix_clashes(res_uni_hydro, cut_off=0.3, include_intra=True, verbose=False)
-    res_uni_hydro.atoms.write(f"{filename}_hydro.gro")
     res_uni_water = replace_martini_water(input_uni=input_uni, output_uni=res_uni_hydro)
     res_uni_water_ions = replace_martini_ions(input_uni=input_uni, output_uni=res_uni_water)
     res_uni_water_ions = order_universe_lipids(res_uni_water_ions)
-    pred_path = f"{filename}_ordered.gro"
+    pred_path = os.path.join(filename, "backmapped_ordered.gro")
     res_uni_water_ions.atoms.write(pred_path)
 
     unique_resnames, index, counts = np.unique(res_uni_water_ions.residues.resnames, return_counts=True, return_index=True)
@@ -220,7 +245,3 @@ def backmapping(input_path, model_path, filename, ext_path=None):
     end_time = time.time()
     print(f"Backmapping took {end_time - start_time:.2f} seconds. {input_path}")
 
-
-
-if __name__ == "__main__":
-    pass
