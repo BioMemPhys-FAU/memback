@@ -8,6 +8,14 @@ version = "0.1.1"
 description = "Neural backmapping of coarse-grained Martini 3 membranes to all-atom CHARMM36 structures"
 readme = "README.md"
 requires-python = ">=3.9"
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Programming Language :: Python :: 3",
+]
 dependencies = [
     "torch",
     "torch-geometric",
@@ -23,8 +31,6 @@ memback = "memback.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# data/ and model/ hold no Python and are not packages, so they ride along as
-# package data on memback itself.
 [tool.setuptools.package-data]
 memback = [
     "data/**/*",
