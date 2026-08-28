@@ -28,7 +28,7 @@ jobs:
         run: pip install -e ".[test]"
 
       - name: Run unit tests
-        run: pytest tests/unit -v
+        run: pytest --cov --cov-branch --cov-report=xml tests/unit -v
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5
