@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use MemBack in your research, please cite the preprint below."
+title: "MemBack"
+abstract: >-
+  Neural backmapping of coarse-grained Martini 3 membranes to all-atom CHARMM36
+  structures using an SE(3)-equivariant graph neural network, with automated
+  hydrogen placement, solvent and ion conversion, stereochemical correction and
+  clash resolution.
+type: software
+license: GPL-3.0-or-later
+repository-code: "https://github.com/BioMemPhys-FAU/memback"
+version: "0.1.1"
+keywords:
+  - backmapping
+  - coarse-grained
+  - molecular-dynamics
+  - martini
+  - graph-neural-network
+  - lipid-membranes
+
+authors:
+  - family-names: "Tunç"
+    given-names: "Y. Eren"
+    affiliation: "Friedrich-Alexander-Universität Erlangen-Nürnberg"
+  - family-names: "Böckmann"
+    given-names: "Rainer"
+    affiliation: "Friedrich-Alexander-Universität Erlangen-Nürnberg"
+
+
+preferred-citation:
+  type: article
+  title: "MemBack: An Equivariant Graph Neural Network for Backmapping Lipid Membranes"
+  authors:
+    - family-names: "Tunç"
+      given-names: "Y. Eren"
+      affiliation: "Friedrich-Alexander-Universität Erlangen-Nürnberg"
+    - family-names: "Böckmann"
+      given-names: "Rainer"
+      affiliation: "Friedrich-Alexander-Universität Erlangen-Nürnberg"
+  journal: "bioRxiv"
+  doi: "10.64898/2026.08.19.745274"
+  url: "https://www.biorxiv.org/content/10.64898/2026.08.19.745274v1"
+  year: 2026
+  month: 8
