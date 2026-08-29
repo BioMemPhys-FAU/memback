@@ -30,7 +30,7 @@ jobs:
       - name: Run unit tests
         run: pytest --cov --cov-branch --cov-report=xml tests/unit -v
 
-      - name: Run integration tests (skipped until fixtures are added)
+      - name: Run integration tests
         run: pytest --cov --cov-branch --cov-report=xml tests/integration -v -m integration
 
       - name: Upload results to Codecov
