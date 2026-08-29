@@ -27,13 +27,40 @@ jobs:
       - name: Install MemBack with test dependencies
         run: pip install -e ".[test]"
 
+      - name: Verify test dependencies are present
+        run: |
+          python -c "import pytest, pytest_cov; print('pytest', pytest.__version__)"
+          pytest --version
+
       - name: Run unit tests
-        run: pytest --cov --cov-branch --cov-report=xml tests/unit -v
+        run: >-
+          pytest tests/unit -v
+          --cov --cov-branch
+          --cov-report=xml:coverage-unit.xml
+        env:
+          COVERAGE_FILE: .coverage.unit
 
       - name: Run integration tests
-        run: pytest --cov --cov-branch --cov-report=xml tests/integration -v -m integration
+        run: >-
+          pytest tests/integration -v -m integration
+          --cov --cov-branch
+          --cov-report=xml:coverage-integration.xml
+        env:
+          COVERAGE_FILE: .coverage.integration
 
-      - name: Upload results to Codecov
+      - name: Upload unit coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-unit.xml
+          flags: unit,py${{ matrix.python-version }}
+          fail_ci_if_error: true
+
+      - name: Upload integration coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-integration.xml
+          flags: integration,py${{ matrix.python-version }}
+          fail_ci_if_error: true
