@@ -150,9 +150,8 @@ class EquivariantBackmap(nn.Module):
     def from_checkpoint(cls, path, map_location="cpu"):
         ckpt = torch.load(path, map_location=map_location, weights_only=False)
         cfg = dict(ckpt["config"])
-        # cfg.pop("pos_in_v", None)
-        # cfg.pop("aa_emb_in", None)
         model = cls(**cfg)
         model.load_state_dict(ckpt["state_dict"], strict=True)
+        model.to(map_location)
         model.eval()
         return model
