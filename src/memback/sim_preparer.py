@@ -57,7 +57,13 @@ def min_mdp_prep(output_path):
     with open(f"{output_path}/min.mdp", "w") as f:
         f.write(min_mdp)
 
-def sim_preparer(metadata, output_path, pred_path=None, ext_path=None):
+def sim_preparer(uni, output_path, pred_path=None, ext_path=None):
+    unique_resnames, index, counts = np.unique(uni.residues.resnames, return_counts=True,
+                                               return_index=True)
+    unique_resnames = unique_resnames[np.argsort(index)]
+    counts = counts[np.argsort(index)]
+    metadata = [(resname, count) for resname, count in zip(unique_resnames, counts)]
+
     os.makedirs(output_path, exist_ok=True)
 
     itps_prep(metadata, output_path, ext_path)
@@ -72,10 +78,9 @@ def sim_preparer(metadata, output_path, pred_path=None, ext_path=None):
         run_sh = f"#!/bin/bash \ngmx grompp -f min.mdp -c {os.path.basename(pred_path)} -r {os.path.basename(pred_path)} -p topol.top -o min.tpr \ngmx mdrun -v -deffnm min"
         with open(f"{output_path}/run_min.sh", "w") as f:
             f.write(run_sh)
-    # TODO Prepare index file
-    # with mda.selections.gromacs.SelectionWriter('residues.ndx', mode='w') as ndx:
-    #     ndx.write(u.select_atoms('resname T*'),
-    #               name='TYR_THR')
-    #     ndx.write(u.select_atoms('resname GLY'),
-    #               name='GLY')
-
+        # Prepare index file
+        with mda.selections.gromacs.SelectionWriter(f'{output_path}/index.ndx', mode='w') as ndx:
+            ndx.write(uni.select_atoms('segid MEMB'),
+                      name='MEMB')
+            ndx.write(uni.select_atoms('segid SOLV ION'),
+                      name='SOLV')

@@ -14,6 +14,7 @@ def place_hydrogens(pred_uni, hdb, itp):
         "resnames": [],
         "resids": [],
         "names": [],
+        "segid": ["MEMB"],
     }
     new_pos = []
     atom_resindex = []
