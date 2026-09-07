@@ -44,4 +44,4 @@ def test_backmapping_produces_all_atom_structure(cg_structure, tmp_path):
 
     # A GROMACS run script and topology should be ready for minimisation.
     assert (output_dir / "topol.top").exists()
-    assert (output_dir / "run_min.sh").exists()
+    assert (output_dir / "run_sim.sh").exists()

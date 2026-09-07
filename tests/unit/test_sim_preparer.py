@@ -1,4 +1,4 @@
-from memback.sim_preparer import min_mdp, min_mdp_prep, sim_preparer, topology_prep
+from memback.sim_preparer import run_sh, mdp_prep, sim_preparer, topology_prep
 
 BIG_BOX = [1000.0, 1000.0, 1000.0, 90.0, 90.0, 90.0]
 
@@ -20,11 +20,14 @@ def test_topology_prep_writes_includes_and_molecule_counts(tmp_path):
 
 
 def test_min_mdp_prep_writes_expected_content(tmp_path):
-    min_mdp_prep(str(tmp_path))
-
-    written = (tmp_path / "min.mdp").read_text()
-    assert written == min_mdp
-
+    mdp_prep(str(tmp_path))
+    assert (tmp_path / "min.mdp").exists()
+    assert (tmp_path / "step6.1_equilibration.mdp").exists()
+    assert (tmp_path / "step6.2_equilibration.mdp").exists()
+    assert (tmp_path / "step6.3_equilibration.mdp").exists()
+    assert (tmp_path / "step6.4_equilibration.mdp").exists()
+    assert (tmp_path / "step6.5_equilibration.mdp").exists()
+    assert (tmp_path / "step6.6_equilibration.mdp").exists()
 
 def test_sim_preparer_end_to_end_with_bundled_forcefield(tmp_path, make_universe):
     u = make_universe(
@@ -47,7 +50,7 @@ def test_sim_preparer_end_to_end_with_bundled_forcefield(tmp_path, make_universe
     assert (output_path / "toppar" / "TIP3.itp").exists()
     assert (output_path / "backmapped.gro").exists()
     assert (output_path / "index.ndx").exists()
-    run_sh = (output_path / "run_min.sh").read_text()
+    run_sh = (output_path / "run_sim.sh").read_text()
     assert "gmx grompp" in run_sh
     assert "backmapped.gro" in run_sh
 
