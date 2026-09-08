@@ -15,6 +15,7 @@ if _ENV_ROOT:
 model_path = str(MODEL_DIR / "memback_0.1.1_state_dict.pt")
 hdb_path = str(DATA_DIR / "hdb" / "lipid.hdb")
 charmm_ff_path = str(DATA_DIR / "forcefields" / "charmm36-feb2026_cgenff-5.0.ff")
+mdp_path = str(DATA_DIR / "mdp_files")
 rtp_path = str(Path(charmm_ff_path) / "lipid.rtp")
 itp_db_path = str(DATA_DIR / "charmm_lipid_itps")
 itp_m3_db_path = str(DATA_DIR / "m3_itps")

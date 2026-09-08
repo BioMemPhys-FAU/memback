@@ -54,6 +54,7 @@ def replace_martini_ions(input_uni,
     ion_u.add_TopologyAttr("name",     atom_names)
     ion_u.add_TopologyAttr("resname",  res_names)
     ion_u.add_TopologyAttr("resid",    np.array(resids, dtype=int))
+    ion_u.add_TopologyAttr("segid", ["ION"])
     ion_u.atoms.positions = np.array(positions, dtype=np.float32)
     ion_u.dimensions = input_uni.dimensions
 

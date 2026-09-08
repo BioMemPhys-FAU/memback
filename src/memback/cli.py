@@ -176,8 +176,8 @@ def main(argv=None) -> int:
     )
 
     print()
-    print(f"Done. Minimise before production MD:")
-    print(f"  cd {output} && bash run_min.sh")
+    print(f"Done. Minimise and equilibrate before production MD:")
+    print(f"  cd {output} && bash run_sim.sh")
     return 0
 
 

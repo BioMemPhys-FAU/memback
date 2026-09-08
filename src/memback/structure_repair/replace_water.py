@@ -149,11 +149,11 @@ def build_tip3p_universe(bead_positions, n_per_bead, water_resname,
     u.add_TopologyAttr("name",    all_atomnames)
     u.add_TopologyAttr("resname", [water_resname] * n_waters)
     u.add_TopologyAttr("resid",   np.arange(resid_start, resid_start + n_waters ))
-    # u.add_TopologyAttr("segid",   ["SOLV"])
+    u.add_TopologyAttr("segid",   ["SOLV"])
     u.atoms.positions = np.array(all_positions, dtype=np.float32)
     return u
 
-def replace_martini_water(input_uni, output_uni="None", water_resname_out="TIP3", n_per_bead=4,
+def replace_martini_water(input_uni, output_uni=None, water_resname_out="TIP3", n_per_bead=4,
                           radius_scale=0.6, rng=random.Random(42), verbose=False):
 
     box = input_uni.dimensions

@@ -38,7 +38,7 @@ def universe_creator(result, mapping, dimensions):
         "resnames": [],
         "resids": [],
         "names": [],
-        # "elements": [],
+        "segid": None
     }
     atom_resindex = []
     n_residues = len(residues)
@@ -237,11 +237,7 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     pred_path = os.path.join(filename, "backmapped_ordered.gro")
     res_uni_water_ions.atoms.write(pred_path)
 
-    unique_resnames, index, counts = np.unique(res_uni_water_ions.residues.resnames, return_counts=True, return_index=True)
-    unique_resnames = unique_resnames[np.argsort(index)]
-    counts = counts[np.argsort(index)]
-    metadata = [(resname, count) for resname, count in zip(unique_resnames, counts)]
-    sim_preparer(metadata, filename, pred_path=pred_path, ext_path=ext_path)
+    sim_preparer(res_uni_water_ions, filename, pred_path=pred_path, ext_path=ext_path)
     end_time = time.time()
     print(f"Backmapping took {end_time - start_time:.2f} seconds. {input_path}")
 
