@@ -27,14 +27,15 @@ while [ $cnt -le $cntmax ]; do
     fi
 
     echo "Running ${{istep}}"
-    gmx grompp -f ${{istep}}.mdp -o ${{istep}}.tpr \
-        -c ${{pstep}}.gro -r ${{rest_prefix}} \
-        -p topol.top -n index.ndx
+    gmx grompp -f ${{istep}}.mdp -o ${{istep}}.tpr -c ${{pstep}}.gro -r ${{rest_prefix}} -p topol.top -n index.ndx
 
     gmx mdrun -v -deffnm ${{istep}}
 
     cnt=$((cnt + 1))
 done
+
+echo "Checking chiral centers with command ./check_chirality.py step6.6_equilibration.gro ..."
+./check_chirality.py step6.6_equilibration.gro
 """
 
 def itps_prep(metadata, output_path, ext_path=None):
