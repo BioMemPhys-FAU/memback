@@ -3,9 +3,10 @@
 # MemBack
 [//]: # (Badges)
 
-| **Status** | [![GH Actions Status](https://github.com/BioMemPhys-FAU/memback/actions/workflows/tests.yml/badge.svg)](https://github.com/BioMemPhys-FAU/memback/actions?query=branch%3Amain+workflow%3Atests) [![codecov](https://codecov.io/gh/BioMemPhys-FAU/memback/branch/main/graph/badge.svg)](https://codecov.io/gh/BioMemPhys-FAU/memback/branch/main)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Latest release** | [![Last release tag](https://img.shields.io/github/release-pre/BioMemPhys-FAU/memback.svg)](https://github.com/BioMemPhys-FAU/memback/releases) ![GitHub commits since latest release (by date) for a branch](https://img.shields.io/github/commits-since/BioMemPhys-FAU/memback/latest) |
 | :------ |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Community** | [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-2.0)  [![Powered by MDAnalysis](https://img.shields.io/badge/powered%20by-MDAnalysis-orange.svg?logoWidth=16&logo=data:image/x-icon;base64,AAABAAEAEBAAAAEAIAAoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJD+XwCY/fEAkf3uAJf97wGT/a+HfHaoiIWE7n9/f+6Hh4fvgICAjwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACT/yYAlP//AJ///wCg//8JjvOchXly1oaGhv+Ghob/j4+P/39/f3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJH8aQCY/8wAkv2kfY+elJ6al/yVlZX7iIiI8H9/f7h/f38UAAAAAAAAAAAAAAAAAAAAAAAAAAB/f38egYF/noqAebF8gYaagnx3oFpUUtZpaWr/WFhY8zo6OmT///8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAn46Ojv+Hh4b/jouJ/4iGhfcAAADnAAAA/wAAAP8AAADIAAAAAwCj/zIAnf2VAJD/PAAAAAAAAAAAAAAAAICAgNGHh4f/gICA/4SEhP+Xl5f/AwMD/wAAAP8AAAD/AAAA/wAAAB8Aov9/ALr//wCS/Z0AAAAAAAAAAAAAAACBgYGOjo6O/4mJif+Pj4//iYmJ/wAAAOAAAAD+AAAA/wAAAP8AAABhAP7+FgCi/38Axf4fAAAAAAAAAAAAAAAAiIiID4GBgYKCgoKogoB+fYSEgZhgYGDZXl5e/m9vb/9ISEjpEBAQxw8AAFQAAAAAAAAANQAAADcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjo6Mb5iYmP+cnJz/jY2N95CQkO4pKSn/AAAA7gAAAP0AAAD7AAAAhgAAAAEAAAAAAAAAAACL/gsAkv2uAJX/QQAAAAB9fX3egoKC/4CAgP+NjY3/c3Nz+wAAAP8AAAD/AAAA/wAAAPUAAAAcAAAAAAAAAAAAnP4NAJL9rgCR/0YAAAAAfX19w4ODg/98fHz/i4uL/4qKivwAAAD/AAAA/wAAAP8AAAD1AAAAGwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALGxsVyqqqr/mpqa/6mpqf9KSUn/AAAA5QAAAPkAAAD5AAAAhQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADkUFBSuZ2dn/3V1df8uLi7bAAAATgBGfyQAAAA2AAAAMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0AAADoAAAA/wAAAP8AAAD/AAAAWgC3/2AAnv3eAJ/+dgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAA/wAAAP8AAAD/AAAA/wAKDzEAnP3WAKn//wCS/OgAf/8MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIQAAANwAAADtAAAA7QAAAMAAABUMAJn9gwCe/e0Aj/2LAP//AQAAAAAAAAAA)](https://www.mdanalysis.org) | 
+| **Status** | [![GH Actions Status](https://github.com/BioMemPhys-FAU/memback/actions/workflows/tests.yml/badge.svg)](https://github.com/BioMemPhys-FAU/memback/actions?query=branch%3Amain+workflow%3Atests) [![codecov](https://codecov.io/gh/BioMemPhys-FAU/memback/branch/main/graph/badge.svg)](https://codecov.io/gh/BioMemPhys-FAU/memback/branch/main)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Community** | [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  [![Powered by MDAnalysis](https://img.shields.io/badge/powered%20by-MDAnalysis-orange.svg?logoWidth=16&logo=data:image/x-icon;base64,AAABAAEAEBAAAAEAIAAoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJD+XwCY/fEAkf3uAJf97wGT/a+HfHaoiIWE7n9/f+6Hh4fvgICAjwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACT/yYAlP//AJ///wCg//8JjvOchXly1oaGhv+Ghob/j4+P/39/f3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJH8aQCY/8wAkv2kfY+elJ6al/yVlZX7iIiI8H9/f7h/f38UAAAAAAAAAAAAAAAAAAAAAAAAAAB/f38egYF/noqAebF8gYaagnx3oFpUUtZpaWr/WFhY8zo6OmT///8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAn46Ojv+Hh4b/jouJ/4iGhfcAAADnAAAA/wAAAP8AAADIAAAAAwCj/zIAnf2VAJD/PAAAAAAAAAAAAAAAAICAgNGHh4f/gICA/4SEhP+Xl5f/AwMD/wAAAP8AAAD/AAAA/wAAAB8Aov9/ALr//wCS/Z0AAAAAAAAAAAAAAACBgYGOjo6O/4mJif+Pj4//iYmJ/wAAAOAAAAD+AAAA/wAAAP8AAABhAP7+FgCi/38Axf4fAAAAAAAAAAAAAAAAiIiID4GBgYKCgoKogoB+fYSEgZhgYGDZXl5e/m9vb/9ISEjpEBAQxw8AAFQAAAAAAAAANQAAADcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjo6Mb5iYmP+cnJz/jY2N95CQkO4pKSn/AAAA7gAAAP0AAAD7AAAAhgAAAAEAAAAAAAAAAACL/gsAkv2uAJX/QQAAAAB9fX3egoKC/4CAgP+NjY3/c3Nz+wAAAP8AAAD/AAAA/wAAAPUAAAAcAAAAAAAAAAAAnP4NAJL9rgCR/0YAAAAAfX19w4ODg/98fHz/i4uL/4qKivwAAAD/AAAA/wAAAP8AAAD1AAAAGwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALGxsVyqqqr/mpqa/6mpqf9KSUn/AAAA5QAAAPkAAAD5AAAAhQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADkUFBSuZ2dn/3V1df8uLi7bAAAATgBGfyQAAAA2AAAAMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0AAADoAAAA/wAAAP8AAAD/AAAAWgC3/2AAnv3eAJ/+dgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAA/wAAAP8AAAD/AAAA/wAKDzEAnP3WAKn//wCS/OgAf/8MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIQAAANwAAADtAAAA7QAAAMAAABUMAJn9gwCe/e0Aj/2LAP//AQAAAAAAAAAA)](https://www.mdanalysis.org) | 
 
 Neural backmapping of coarse-grained **Martini 3** membranes to all-atom
 **CHARMM36** structures.
@@ -65,12 +66,110 @@ memback membrane_cg.gro
 ```
 
 That reads the coarse-grained structure and writes everything into
-`membrane_cg_backmapped/`. Then minimise:
+`membrane_cg_backmapped/`. Then minimise and equilibrate:
 
 ```bash
 cd membrane_cg_backmapped
-bash run_min.sh
+bash run_sim.sh
 ```
+
+### What `run_sim.sh` does
+
+The script runs three stages in sequence inside the output directory:
+
+1. **Minimisation.** Steepest descent with `min.mdp`, using position and
+   dihedral restraints on the lipids referenced to `backmapped_ordered.gro`.
+   Produces `min.gro`.
+2. **Equilibration.** Six consecutive runs, `step6.1_equilibration` through
+   `step6.6_equilibration`, each starting from the previous one's output (the
+   first from `min.gro`). Restraints are again referenced to
+   `backmapped_ordered.gro`; their strengths are set in the individual
+   `step6.*_equilibration.mdp` files. These runs use `index.ndx`.
+3. **Chirality check.** `check_chirality.py` is run on the final frame,
+   `step6.6_equilibration.gro`, to confirm that every lipid stereocentre has the
+   correct handedness.
+
+### Checking chirality
+
+Backmapping and early relaxation can occasionally leave a stereocentre (for
+example the glycerol C2 of a phospholipid) inverted or squashed flat. An
+inverted centre is a different stereoisomer and will not correct itself during
+unrestrained MD, so it is worth checking before production. `run_sim.sh` does
+this automatically, and you can run the check on any structure yourself:
+
+```bash
+./check_chirality.py step6.6_equilibration.gro
+```
+
+The reference handedness is taken from the ±120° dihedral restraints in
+`toppar/*.itp` (use `--toppar DIR` if your topologies live elsewhere). Example
+output:
+
+```
+resname  center    total       ok    wrong       flat   collin    fixed
+DLIPC    C2          184      183        1          0        0        0
+DPPC     C2          184      183        1          0        0        0
+----------------------------------------------------------------------
+total centers   : 368
+correct         : 366 (99.46%)
+wrong sign      : 2
+flat/degenerate : 0
+collinear tips  : 0 (skipped)
+Re-run check_chirality.py with --fix option to fix wrong sign and flat defects.
+```
+
+Each row is one stereocentre type (residue name and centre atom), and the
+columns count how many instances of it fall into each category:
+
+| Column | Meaning |
+| --- | --- |
+| `total` | Number of instances of this centre in the structure (one per lipid). |
+| `ok` | Correct handedness and a well-formed tetrahedron. |
+| `wrong` | Well-formed centre with inverted handedness (the wrong stereoisomer). |
+| `flat` | Centre almost coplanar with its substituents, so its handedness is undefined. |
+| `collin` | Substituent atoms nearly collinear; the centre cannot be judged and is skipped. |
+| `fixed` | Centres repaired in this run (only non-zero with `--fix`). |
+
+In the example above, one DLIPC and one DPPC lipid (2 of 368 centres) have the
+wrong handedness. If `wrong` and `flat` are both zero, nothing needs to be
+done. A non-zero `collin` count is rare and indicates a badly distorted
+geometry that should be inspected by hand.
+
+### Fixing wrong chirality
+
+Re-run the check with `--fix`:
+
+```bash
+./check_chirality.py step6.6_equilibration.gro --fix
+```
+
+```
+resname  center    total       ok    wrong       flat   collin    fixed
+DLIPC    C2          184      183        1          0        0        1
+DPPC     C2          184      183        1          0        0        1
+----------------------------------------------------------------------
+total centers   : 368
+correct         : 366 (99.46%)
+wrong sign      : 2
+flat/degenerate : 0
+collinear tips  : 0 (skipped)
+fixed           : 2
+failed          : 0
+wrote step6.6_equilibration_chirfix.gro (4 atoms modified)
+Energy minimisation is recommended before running the next step.
+```
+
+The summary counts (`correct`, `wrong sign`, …) describe the input structure;
+the `fixed` and `failed` lines report the outcome of the repair. For each
+`wrong` or `flat` centre, only the centre atom is moved onto the correct face
+of its substituents and its hydrogen is re-placed. The substituents themselves
+are not touched, and every repair is re-checked. The result is written to
+`<input>_chirfix.gro` (change with `-o FILE`); velocities, header and box are
+kept. Any `failed` entries should be inspected manually.
+
+**A restrained energy minimisation is required after fixing.** The repair
+moves atoms without regard for the surrounding bond geometry and neighbours,
+so the corrected structure must be relaxed before it is simulated further.
 
 ## Command-line options
 

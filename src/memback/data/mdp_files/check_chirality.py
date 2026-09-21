@@ -297,7 +297,7 @@ def main():
         print("wrong sign      : %d" % tot['WRONG'])
         print("flat/degenerate : %d" % tot['FLAT'])
         print("collinear tips  : %d (skipped)" % tot['COLLINEAR'])
-        if not do_fix and tot['WRONG'] or tot['FLAT']:
+        if not do_fix and (tot['WRONG'] or tot['FLAT']):
             print("Re-run check_chirality.py with --fix option to fix wrong sign and flat defects.")
     for r, k in missing.items():
         print("warning: %s missing restraint atoms in %d residues" % (r, k))
