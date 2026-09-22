@@ -176,7 +176,7 @@ def main(argv=None) -> int:
     )
 
     print()
-    print(f"Done. Minimise and equilibrate before production MD:")
+    print(f"Done. Source your preferred GROMACS version. Later, minimise and equilibrate before production MD:")
     print(f"  cd {output} && bash run_sim.sh")
     return 0
 

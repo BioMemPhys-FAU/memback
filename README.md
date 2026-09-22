@@ -66,7 +66,7 @@ memback membrane_cg.gro
 ```
 
 That reads the coarse-grained structure and writes everything into
-`membrane_cg_backmapped/`. Then minimise and equilibrate:
+`membrane_cg_backmapped/`. Source your preferred GROMACS version and then minimise and equilibrate:
 
 ```bash
 cd membrane_cg_backmapped
