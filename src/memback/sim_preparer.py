@@ -34,8 +34,8 @@ while [ $cnt -le $cntmax ]; do
     cnt=$((cnt + 1))
 done
 
-echo "Checking chiral centers with command ./check_chirality.py step6.6_equilibration.gro ..."
-./check_chirality.py step6.6_equilibration.gro
+echo "Checking chiral centers with command python check_chirality.py step6.6_equilibration.gro ..."
+python check_chirality.py step6.6_equilibration.gro
 """
 
 def itps_prep(metadata, output_path, ext_path=None):

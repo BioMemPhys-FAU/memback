@@ -98,7 +98,7 @@ unrestrained MD, so it is worth checking before production. `run_sim.sh` does
 this automatically, and you can run the check on any structure yourself:
 
 ```bash
-./check_chirality.py step6.6_equilibration.gro
+python check_chirality.py step6.6_equilibration.gro
 ```
 
 The reference handedness is taken from the ±120° dihedral restraints in
@@ -140,7 +140,7 @@ geometry that should be inspected by hand.
 Re-run the check with `--fix`:
 
 ```bash
-./check_chirality.py step6.6_equilibration.gro --fix
+python check_chirality.py step6.6_equilibration.gro --fix
 ```
 
 ```
