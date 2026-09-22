@@ -56,7 +56,7 @@ def topology_prep(metadata, output_path, filename = "topol.top"):
         for resname, _ in metadata:
             f.write(f'#include "toppar/{resname}.itp"\n')
         f.write('\n[ system ]\n')
-        f.write('Backmapped by memBmap\n')
+        f.write('Backmapped by MemBack\n')
         f.write('\n[ molecules ]\n')
         for resname, counts in metadata:
             f.write(f'{resname}  	          {counts}\n')
