@@ -34,23 +34,52 @@ CPU; CUDA is used automatically when available.
 
 ## Installation
 
-Install torch and torch-geometric first, following their own instructions for
-your platform and CUDA version. Then:
+MemBack is available on PyPI:
+
+```bash
+pip install memback
+```
+
+This pulls in PyTorch and PyTorch Geometric automatically. If you need a
+specific CUDA build of torch, install torch and torch-geometric first,
+following their own instructions for your platform, and then run the command
+above.
+
+A virtual environment is recommended:
+
+```bash
+python -m venv venv && source venv/bin/activate
+pip install memback
+```
+
+To update an existing installation:
+
+```bash
+pip install --upgrade memback
+```
+
+### Installing from source
+
+If you plan to modify the code, install from a clone instead. The editable
+install (`-e`) picks up your changes without reinstalling:
 
 ```bash
 git clone https://github.com/BioMemPhys-FAU/memback.git
-cd MemBack
+cd memback
 python -m venv venv && source venv/bin/activate
-pip install .
+pip install -e .
 ```
 
-Editable installs (`pip install -e .`) work identically and are the better
-choice if you plan to modify the code.
+To update a source install, pull the latest changes. Editable installs need no
+reinstall; a regular `pip install .` must be re-run after pulling:
+
+```bash
+git pull
+```
 
 The lipid databases, force field and model checkpoint ship inside the package,
-so nothing needs to be configured after installation and the clone can be
-deleted afterwards. Note that this makes the install roughly 130 MB, most of it
-the checkpoint.
+so nothing needs to be configured after installation. Note that this makes the
+install roughly 130 MB, most of it the checkpoint.
 
 Verify:
 
@@ -72,6 +101,16 @@ That reads the coarse-grained structure and writes everything into
 cd membrane_cg_backmapped
 bash run_sim.sh
 ```
+
+If your membrane contains lipids that MemBack does not ship (the run prints
+`Residue XXXX not found in mapping. Skipping...`), provide their mapping,
+bond and topology files in an extension folder:
+
+```bash
+memback membrane_cg.gro -e ./my_lipids
+```
+
+See [Extending to new lipids](#extending-to-new-lipids) for the file formats.
 
 ### What `run_sim.sh` does
 
@@ -195,10 +234,13 @@ Written into the output directory:
 
 | File | Contents |
 | --- | --- |
-| `backmapped_ordered.gro` | The above plus water and ions, residues grouped by type as GROMACS expects. **This is the structure to simulate.** |
+| `backmapped_ordered.gro` | Backmapped all-atom membrane plus water and ions, residues grouped by type as GROMACS expects. **This is the structure to simulate.** |
 | `topol.top` | Topology including `toppar/forcefield.itp` and one `.itp` per lipid, with a `[ molecules ]` count matching the structure. |
 | `min.mdp` | Steepest descent with position and dihedral restraints on lipids. |
-| `run_min.sh` | `gmx grompp` + `gmx mdrun` for that minimisation. |
+| `step6.1_equilibration.mdp` … `step6.6_equilibration.mdp` | Six restrained equilibration stages, run after minimisation. |
+| `index.ndx` | Index groups `MEMB` (lipids) and `SOLV` (water and ions) used by the equilibration runs. |
+| `check_chirality.py` | Standalone, non-interactive chirality checker and fixer (see [Checking chirality](#checking-chirality)). |
+| `run_sim.sh` | Runs minimisation, all six equilibration stages and the chirality check in sequence (see [What `run_sim.sh` does](#what-run_simsh-does)). |
 | `toppar/` | CHARMM36 force field plus the per-lipid `.itp` files actually used. |
 
 ## Extending to new lipids

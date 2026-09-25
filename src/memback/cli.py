@@ -40,14 +40,17 @@ extension directory (-e):
   the same folder can also be used to patch a lipid that ships with MemBack.
 
 outputs (written into the output directory):
-  backmapped_ordered.gro   + water and ions, residues grouped by type
-  topol.top                GROMACS topology referencing toppar/
-  min.mdp                  restrained steepest-descent minimisation
-  run_min.sh               grompp + mdrun for that minimisation
-  toppar/                  force field and per-lipid .itp files
+  backmapped_ordered.gro     + water and ions, residues grouped by type
+  topol.top                  GROMACS topology referencing toppar/
+  min.mdp                    restrained steepest-descent minimisation
+  step6.*_equilibration.mdp  six restrained equilibration stages
+  index.ndx                  MEMB and SOLV groups for equilibration
+  check_chirality.py         non-interactive chirality check (--fix to repair)
+  run_sim.sh                 minimisation, equilibration and chirality check
+  toppar/                    force field and per-lipid .itp files
 
-The output is a raw model prediction. Always run the packaged minimisation
-before using the structure for production MD.
+The output is a raw model prediction. Always run the packaged run_sim.sh
+(minimisation and equilibration) before using the structure for production MD.
 """
 
 

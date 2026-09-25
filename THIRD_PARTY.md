@@ -111,5 +111,5 @@ All are compatible with distributing MemBack under GPL-3.0-or-later. MDAnalysis
 being LGPL rather than GPL matters here: it means MemBack is free to choose its
 own license, and a GPL choice is one of the options that remains open.
 
-GROMACS is invoked as a separate program by the generated `run_min.sh` and is
+GROMACS is invoked as a separate program by the generated `run_sim.sh` and is
 not linked into MemBack, so its LGPL-2.1 terms do not propagate.
