@@ -102,15 +102,17 @@ cd membrane_cg_backmapped
 bash run_sim.sh
 ```
 
-If your membrane contains lipids that MemBack does not ship (the run prints
-`Residue XXXX not found in mapping. Skipping...`), provide their mapping,
-bond and topology files in an extension folder:
+If your membrane contains lipids that MemBack does not ship, it stops before
+writing anything, names them, and prints the `memback create_map` commands that
+build their mapping. Put the created files, and any CHARMM36 `.itp` MemBack does
+not ship, in an extension folder:
 
 ```bash
 memback membrane_cg.gro -e ./my_lipids
 ```
 
-See [Extending to new lipids](#extending-to-new-lipids) for the file formats.
+To backmap without those lipids instead, add `--skip-missing`. See
+[Extending to new lipids](#extending-to-new-lipids) for details.
 
 ### What `run_sim.sh` does
 
@@ -213,7 +215,7 @@ so the corrected structure must be relaxed before it is simulated further.
 ## Command-line options
 
 ```
-memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--device {auto,cpu,cuda}] [-V] input
+memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cuda}] [-V] input
 ```
 
 | Option | Meaning |
@@ -222,11 +224,49 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--device {auto,cpu,cuda}] [-V] input
 | `-o`, `--output DIR` | Output directory. Default `<input stem>_backmapped`. |
 | `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases. |
 | `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`. |
+| `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
 | `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. |
 | `-V`, `--version` | Print version and exit. |
 
 Only single frames are supported. To backmap a trajectory, extract frames first
 and run MemBack on each.
+
+### `memback create_map`
+
+```
+memback create_map [-h] --m3itp M3ITP [--m3name M3NAME] --aaitp AAITP
+                   [--aaname AANAME] [--refmap REFMAP] [--refres REFRES]
+                   [--name NAME] [--chainorder CHAIN [CHAIN ...]] [-o PREFIX]
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--m3itp` | Martini 3 `.itp` of the lipid. May hold several molecules. |
+| `--m3name` | Molecule to take from `--m3itp`; required when it holds more than one. |
+| `--aaitp` | CHARMM36 GROMACS `.itp` of the same lipid. |
+| `--aaname` | Molecule to take from `--aaitp`; required when it holds more than one. |
+| `--refmap` | Map containing a lipid with the same head group. Default: MemBack's own `all_maps.map`. |
+| `--refres` | Lipid in `--refmap` to copy the head group from. Default: chosen automatically. |
+| `--name` | Residue name written into the files. Default: the CHARMM molecule name. |
+| `--chainorder` | CHARMM chain for each Martini tail chain `A`, `B`, …. Default: taken from the reference lipid. |
+| `-o`, `--output PREFIX` | Writes `PREFIX.map` and `PREFIX.bnd`. Default: `./<name>`. |
+
+See [Creating map files](#creating-map-files).
+
+### `memback check_maps`
+
+```
+memback check_maps [-h] [-e DIR] [--m3itp ITP [ITP ...]] [--strict] [-v]
+```
+
+| Option | Meaning |
+| --- | --- |
+| `-e`, `--extension DIR` | Check the `.map`/`.bnd` files of this extension folder instead of the shipped databases. Its `.itp` files are used before the shipped ones. |
+| `--m3itp` | Extra Martini 3 `.itp` files to compare against; the shipped ones are always used. |
+| `--strict` | Exit with status 1 on warnings too, not only on errors. |
+| `-v`, `--verbose` | Also list lipids without issues. |
+
+See [Checking map files](#checking-map-files).
 
 ## Outputs
 
@@ -282,6 +322,91 @@ PO4 GL1
 NC3 PO4 GL1      ; angles, three bead names per line
 ```
 
+### Creating map files
+
+`memback create_map` writes the `.map` and `.bnd` for a lipid from two
+topologies you usually already have: its Martini 3 `.itp` and its CHARMM36
+`.itp`. The same CHARMM `.itp` then goes into the extension folder for the
+topology step.
+
+```bash
+memback create_map --m3itp martini_v3.0.0_phospholipids_PC_v2.itp --m3name DAPC \
+                   --aaitp DAPC.itp -o my_lipids/DAPC
+cp DAPC.itp my_lipids/
+memback membrane_cg.gro -e ./my_lipids
+```
+
+```
+Martini 3 : DAPC (14 beads)   CHARMM36 : DAPC (138 atoms)
+Headgroup : ['NC3', 'PO4', 'GL1', 'GL2'] copied from DMPC
+Chain mapping (Martini → CHARMM): {'X': 'X', 'A': 'A', 'B': 'B'}
+Overmapped beads (+1 carbon): []
+Written: my_lipids/DAPC.map
+Written: my_lipids/DAPC.bnd
+All checks passed.
+```
+
+How the mapping is built:
+
+- **Head group.** Beads with non-carbon Martini types (`Q*`, `P*`, `N*`, …)
+  copy their atoms from a reference lipid that has exactly the same head-group
+  beads, found automatically in MemBack's `all_maps.map`. A lipid with a head
+  group MemBack does not know needs a reference: pass a map that contains one
+  with `--refmap` (and `--refres`).
+- **Tails.** Carbon beads take consecutive carbons along their CHARMM chain:
+  4 per regular bead, 3 per `S` bead, 2 per `T` bead. Martini 3 marks a bead
+  that covers one extra carbon with `*_5long` bond types (for example the first
+  bead of an oleoyl chain), and that bead gets 5. Hydrogens follow their carbon.
+- **Chains.** CHARMM tail carbons are recognised as `C2x`/`C3x` (sn-1/sn-2) or
+  by a trailing letter as in sphingolipids (`C1S`, `C4F`). Which CHARMM chain
+  belongs to Martini chain `A`, `B`, … is read from the reference lipid;
+  `--chainorder S F` overrides it.
+- **Bonds.** The `.bnd` takes bonds (including constraints) and angles from the
+  Martini 3 `.itp`. Massless virtual beads, such as `C4` of PI, are left out.
+
+The files are read back with MemBack's own readers and checked for unassigned
+atoms, atoms in more than one bead, beads with no or more than 6 heavy atoms,
+and bonds to unknown beads. The command exits with status 1 if any check
+fails. Look at the result before using it, especially for unusual head groups
+or tails.
+
+### Checking map files
+
+`memback check_maps` checks `.map`/`.bnd` files against the lipids' CHARMM36
+and Martini 3 topologies, whether they were written by hand or by
+`memback create_map`. Run it on an extension folder before backmapping with it:
+
+```bash
+memback check_maps -e ./my_lipids
+```
+
+```
+[POPI14]
+  ERROR   atom O4 is in beads C3 and P4
+  WARNING hydrogens not in the CHARMM36 itp: ['HO4', 'HP42']
+
+3 lipids checked: 1 with errors, 0 with warnings.
+```
+
+**Errors** break backmapping or give a wrong structure: a lipid without a
+`.bnd` section, two different sections with the same name, an atom in more than
+one bead, a bead with no or more than 6 heavy atoms, a missing CHARMM36 `.itp`,
+heavy atoms that are in the map but not in the `.itp` or the other way round,
+beads that differ from the Martini 3 topology, and bonds to unknown beads.
+**Warnings** are worth a look: unknown or missing hydrogens (MemBack rebuilds
+hydrogens from the `.itp`), bead types, charges or bonds that differ from
+Martini 3, beads without bonds, and lipids with no Martini 3 topology to
+compare against. Massless virtual beads, such as `C4` of PI, are expected to be
+absent from maps. CHL1 is not compared with Martini 3 at all: cholesterol's
+virtual sites carry atoms and its `.bnd` uses its own bead graph, so only the
+CHARMM36 and `.bnd` checks apply to it (`M3_CHECK_EXEMPT` in
+`src/memback/check_maps.py`).
+
+The command exits with status 1 on errors (`--strict`: also on warnings). The
+shipped databases are checked the same way in CI: the `map-integrity` job of
+the [Tests](.github/workflows/tests.yml) workflow runs `memback check_maps`
+once the unit tests pass, on every push and pull request.
+
 Databases live under `src/memback/data/` and the checkpoint under
 `src/memback/model/`, both bundled as package data. `MEMBACK_ROOT` overrides
 their location if you want to keep them outside the installation; it must point
@@ -303,8 +428,13 @@ backmapping(
     ext_path="./my_lipids",       # optional
     model_path=None,              # optional; defaults to the shipped checkpoint
     device=None,                  # optional; defaults to CUDA when available
+    skip_missing=False,           # optional; True leaves out residues without a mapping
 )
 ```
+
+Residues without a mapping raise `memback.pipeline.MissingMappingError`
+(its `resnames` attribute lists them) before anything is written, unless
+`skip_missing=True`.
 
 Loading the model on its own:
 
@@ -367,8 +497,11 @@ Anything else needs an extension folder.
 
 ## Troubleshooting
 
-**`Residue XXXX not found in mapping. Skipping...`** — that residue has no
-`.map` entry and is dropped from the output. Supply it via `-e`.
+**`error: no mapping for residue(s) in ...`** — those residues have no `.map`
+entry. Create their maps with the `memback create_map` commands printed below
+the error (see [Creating map files](#creating-map-files)) and pass the folder
+with `-e`, or rerun with `--skip-missing` to drop them from the output
+(the run then prints `Skipping residues without a mapping: ...`).
 
 **`error: MemBack data files are missing`** — the installation is incomplete,
 or `MEMBACK_ROOT` is set and points somewhere without `data/` and `model/`.
