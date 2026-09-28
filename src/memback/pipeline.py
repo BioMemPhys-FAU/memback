@@ -12,6 +12,7 @@ from torch_geometric.utils import unbatch
 from memback.models.equivariant_memback import EquivariantBackmap
 from memback.io.itp_to_hdb import itp_dir_to_hdb
 from memback.config import (itp_db_path, hdb_path, martini3_to_charmm_lipids,
+                            martini3_excluded_residues,
                             map_path, bond_map_path, model_path as default_model_path)
 from memback.helpers import map_reader_full, calculate_distance, prepare_residue_data_prod_v2, read_bnd
 from memback.structure_repair.hydrogen_adder_gmx import place_hydrogens
@@ -22,8 +23,21 @@ from memback.structure_repair.fix_clashes import fix_clashes
 from memback.structure_repair.fix_chirality import fix_chirality
 from memback.io.read_sim_metadata import read_hdb, read_itp_directory
 
-__all__ = ["backmapping", "EquivariantBackmap"]
+__all__ = ["backmapping", "EquivariantBackmap", "MissingMappingError"]
 
+
+class MissingMappingError(ValueError):
+    """Residues in the input structure that have no .map entry."""
+    def __init__(self, resnames):
+        self.resnames = list(resnames)
+        super().__init__(
+            f"no mapping for residue(s) {', '.join(self.resnames)}; provide their "
+            f".map/.bnd via ext_path or pass skip_missing=True to leave them out"
+        )
+
+def find_missing_mappings(universe, mapping):
+    """Residue names in the universe with no mapping, water and ions excluded."""
+    return sorted(set(universe.residues.resnames) - set(mapping) - set(martini3_excluded_residues))
 
 def universe_creator(result, mapping, dimensions):
     lipid_atoms = {resname: [name for each in list(res_map['atoms'].values()) for name in each] for resname, res_map in mapping.items()}
@@ -189,15 +203,18 @@ def get_torch_device():
     return torch.device("cpu")
 
 
-def backmapping(input_path, model_path=None, filename=None, ext_path=None, device=None):
+def backmapping(input_path, model_path=None, filename=None, ext_path=None, device=None,
+                skip_missing=False):
     """
     Backmap a single-frame coarse-grained structure to all-atom.
 
-    input_path : CG structure readable by MDAnalysis (.gro, .pdb, ...)
-    model_path : checkpoint; defaults to the version shipped in model/
-    filename   : output directory; defaults to <input stem>_backmapped
-    ext_path   : optional directory of extra .map / .bnd / .itp files
-    device     : torch.device; defaults to CUDA when available
+    input_path   : CG structure readable by MDAnalysis (.gro, .pdb, ...)
+    model_path   : checkpoint; defaults to the version shipped in model/
+    filename     : output directory; defaults to <input stem>_backmapped
+    ext_path     : optional directory of extra .map / .bnd / .itp files
+    device       : torch.device; defaults to CUDA when available
+    skip_missing : leave out residues without a mapping instead of raising
+                   MissingMappingError (raised before anything is written)
     """
     if model_path is None:
         model_path = default_model_path
@@ -206,7 +223,6 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     if device is None:
         device = get_torch_device()
 
-    os.makedirs(filename, exist_ok=True)
     start_time = time.time()
     mapping = map_reader_full(map_path)
     bnd_map = read_bnd(bond_map_path)
@@ -220,6 +236,13 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     for resname in unique_resnames:
         if resname in martini3_to_charmm_lipids:
             input_uni.select_atoms(f"resname {resname}").residues.resnames = martini3_to_charmm_lipids[resname]
+
+    missing = find_missing_mappings(input_uni, mapping)
+    if missing and not skip_missing:
+        raise MissingMappingError(missing)
+    if missing:
+        print(f"Skipping residues without a mapping: {', '.join(missing)}")
+    os.makedirs(filename, exist_ok=True)
 
     input_data = input_handler_single_frame(input_uni, mapping, bnd_map)
     model = EquivariantBackmap.from_checkpoint(model_path, map_location=device)

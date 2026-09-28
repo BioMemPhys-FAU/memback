@@ -113,6 +113,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Model checkpoint (.pt). Default: the version shipped in model/.",
     )
     parser.add_argument(
+        "--skip-missing",
+        action="store_true",
+        help=(
+            "Leave out residues that have no mapping instead of stopping. "
+            "By default MemBack stops and suggests memback create_map commands."
+        ),
+    )
+    parser.add_argument(
         "--device",
         choices=("auto", "cpu", "cuda"),
         default="auto",
@@ -140,6 +148,46 @@ def resolve_device(choice: str):
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def missing_mapping_message(resnames, input_path, extension=None) -> str:
+    """Explain how to create the missing maps with memback create_map."""
+    from memback import config
+    from memback.create_map import read_m3_molecules
+
+    folder = extension or Path("my_lipids")
+    m3_files = {}
+    for itp in sorted(Path(config.itp_m3_db_path).glob("*.itp")):
+        for name in read_m3_molecules(itp):
+            m3_files.setdefault(name, itp)
+
+    lines = [
+        f"error: no mapping for residue(s) in {input_path}: {', '.join(resnames)}",
+        "",
+        "Create their .map/.bnd files with memback create_map, check them, and pass",
+        "the folder with -e:",
+        "",
+    ]
+    copies = []
+    for resname in resnames:
+        m3_name = config.charmm_to_martini3.get(resname, resname)
+        m3_itp = m3_files.get(m3_name, f"<Martini 3 itp of {m3_name}>")
+        aa_itp = Path(config.itp_db_path) / f"{resname}.itp"
+        if extension and (extension / f"{resname}.itp").is_file():
+            aa_itp = extension / f"{resname}.itp"
+        elif not aa_itp.is_file():
+            aa_itp = f"<CHARMM36 {resname}.itp>"
+            copies.append(f"  cp {aa_itp} {folder / f'{resname}.itp'}")
+        lines.append(f"  memback create_map --m3itp {m3_itp} --m3name {m3_name} \\")
+        lines.append(f"      --aaitp {aa_itp} -o {folder / resname}")
+    lines += [
+        *copies,
+        f"  memback check_maps -e {folder}",
+        f"  memback {input_path} -e {folder}",
+        "",
+        "Or rerun with --skip-missing to leave these residues out of the output.",
+    ]
+    return "\n".join(lines)
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     # Subcommands are dispatched by hand so that `memback <input>` keeps working
@@ -163,7 +211,7 @@ def main(argv=None) -> int:
     # Imported late so that --help and --version stay fast and do not require
     # torch to be importable.
     from memback.config import check_data_files, model_path as default_model_path
-    from memback.pipeline import backmapping
+    from memback.pipeline import MissingMappingError, backmapping
 
     missing = check_data_files()
     if missing:
@@ -192,13 +240,17 @@ def main(argv=None) -> int:
         print(f"  extension  {args.extension}")
     print()
 
-    backmapping(
-        input_path=str(args.input),
-        model_path=str(model),
-        filename=str(output),
-        ext_path=str(args.extension) if args.extension else None,
-        device=device,
-    )
+    try:
+        backmapping(
+            input_path=str(args.input),
+            model_path=str(model),
+            filename=str(output),
+            ext_path=str(args.extension) if args.extension else None,
+            device=device,
+            skip_missing=args.skip_missing,
+        )
+    except MissingMappingError as err:
+        raise SystemExit(missing_mapping_message(err.resnames, args.input, args.extension))
 
     print()
     print(f"Done. Source your preferred GROMACS version. Later, minimise and equilibrate before production MD:")

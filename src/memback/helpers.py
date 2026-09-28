@@ -105,14 +105,11 @@ def prepare_residue_data_prod_v2(cg_universe, mapping, bnd_info):
     Prepares a look-up table for each lipid type. Since lipid has the same features among different copies in the same type.
     """
     res_dat = {}
+    # Residues without a mapping (water, ions, and any the caller chose to skip,
+    # see pipeline.find_missing_mappings) are left out.
     for resname in np.unique(cg_universe.residues.resnames):
         if resname in mapping:
             res_dat[resname] = {}
-        elif resname in globals.martini3_excluded_residues:
-            continue
-        else:
-            print(f"Residue {resname} not found in mapping. Skipping... ")
-            continue
 
     for resname in res_dat.keys():
         # Remove the beads that are not in mapping file. (Added for virtual bead cases such as POPI33)

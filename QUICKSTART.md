@@ -86,10 +86,16 @@ continuing.
 6. Lipids not built in (mapping extension)
 ------------------------------------------
 
-MemBack ships 55 lipid types. If the run prints
-"Residue XXXX not found in mapping. Skipping...", that lipid is missing
-from the output. Add it through an extension folder; files are matched by
-suffix:
+If the membrane contains a lipid MemBack does not ship, the run stops
+with "error: no mapping for residue(s) ..." and prints the memback
+create_map commands that build its mapping, for example:
+
+    memback create_map --m3itp martini_v3.0.0_phospholipids_PC_v2.itp \
+        --m3name DPPC --aaitp DPPC.itp -o my_lipids/DPPC
+    memback check_maps -e my_lipids
+
+(Add --skip-missing to the memback run to leave such lipids out instead.)
+Add the lipid through an extension folder; files are matched by suffix:
 
     my_lipids/
       mylipids.map    AA -> CG mapping, one [RESNAME] section per lipid
@@ -122,8 +128,9 @@ follow PyCGTOOL conventions; see "Extending to new lipids" in README.md.
 7. Quick troubleshooting
 ------------------------
 
-  "Residue XXXX not found in mapping"
-      That lipid is not built in; add it with -e (see section 6).
+  "error: no mapping for residue(s) ..."
+      That lipid is not built in; run the printed memback create_map
+      commands and add it with -e (see section 6), or use --skip-missing.
 
   "MemBack data files are missing"
       Incomplete install, or MEMBACK_ROOT points to the wrong place.

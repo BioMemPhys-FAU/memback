@@ -102,15 +102,17 @@ cd membrane_cg_backmapped
 bash run_sim.sh
 ```
 
-If your membrane contains lipids that MemBack does not ship (the run prints
-`Residue XXXX not found in mapping. Skipping...`), provide their mapping,
-bond and topology files in an extension folder:
+If your membrane contains lipids that MemBack does not ship, it stops before
+writing anything, names them, and prints the `memback create_map` commands that
+build their mapping. Put the created files, and any CHARMM36 `.itp` MemBack does
+not ship, in an extension folder:
 
 ```bash
 memback membrane_cg.gro -e ./my_lipids
 ```
 
-See [Extending to new lipids](#extending-to-new-lipids) for the file formats.
+To backmap without those lipids instead, add `--skip-missing`. See
+[Extending to new lipids](#extending-to-new-lipids) for details.
 
 ### What `run_sim.sh` does
 
@@ -213,7 +215,7 @@ so the corrected structure must be relaxed before it is simulated further.
 ## Command-line options
 
 ```
-memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--device {auto,cpu,cuda}] [-V] input
+memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cuda}] [-V] input
 ```
 
 | Option | Meaning |
@@ -222,6 +224,7 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--device {auto,cpu,cuda}] [-V] input
 | `-o`, `--output DIR` | Output directory. Default `<input stem>_backmapped`. |
 | `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases. |
 | `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`. |
+| `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
 | `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. |
 | `-V`, `--version` | Print version and exit. |
 
@@ -425,8 +428,13 @@ backmapping(
     ext_path="./my_lipids",       # optional
     model_path=None,              # optional; defaults to the shipped checkpoint
     device=None,                  # optional; defaults to CUDA when available
+    skip_missing=False,           # optional; True leaves out residues without a mapping
 )
 ```
+
+Residues without a mapping raise `memback.pipeline.MissingMappingError`
+(its `resnames` attribute lists them) before anything is written, unless
+`skip_missing=True`.
 
 Loading the model on its own:
 
@@ -489,9 +497,11 @@ Anything else needs an extension folder.
 
 ## Troubleshooting
 
-**`Residue XXXX not found in mapping. Skipping...`** — that residue has no
-`.map` entry and is dropped from the output. Supply it via `-e`;
-`memback create_map` can generate the map (see [Creating map files](#creating-map-files)).
+**`error: no mapping for residue(s) in ...`** — those residues have no `.map`
+entry. Create their maps with the `memback create_map` commands printed below
+the error (see [Creating map files](#creating-map-files)) and pass the folder
+with `-e`, or rerun with `--skip-missing` to drop them from the output
+(the run then prints `Skipping residues without a mapping: ...`).
 
 **`error: MemBack data files are missing`** — the installation is incomplete,
 or `MEMBACK_ROOT` is set and points somewhere without `data/` and `model/`.
