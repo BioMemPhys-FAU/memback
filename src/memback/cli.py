@@ -31,9 +31,14 @@ examples:
   # create .map/.bnd files for a lipid MemBack does not cover
   memback create_map --m3itp martini_PC.itp --m3name DAPC --aaitp DAPC.itp -o my_lipids/DAPC
 
+  # check the .map/.bnd files of an extension folder before using them
+  memback check_maps -e my_lipids
+
 commands:
   create_map   Build a .map/.bnd pair from a lipid's Martini 3 and CHARMM36
                .itp files, for use with -e. See: memback create_map -h
+  check_maps   Check .map/.bnd files against the lipid topologies (the shipped
+               databases, or an extension folder with -e). See: memback check_maps -h
 
 extension directory (-e):
   A folder holding any combination of the following, for lipids that are not
@@ -142,6 +147,9 @@ def main(argv=None) -> int:
     if argv and argv[0] == "create_map":
         from memback.create_map import main as create_map_main
         return create_map_main(argv[1:])
+    if argv and argv[0] == "check_maps":
+        from memback.check_maps import main as check_maps_main
+        return check_maps_main(argv[1:])
 
     args = build_parser().parse_args(argv)
 

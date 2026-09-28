@@ -250,6 +250,21 @@ memback create_map [-h] --m3itp M3ITP [--m3name M3NAME] --aaitp AAITP
 
 See [Creating map files](#creating-map-files).
 
+### `memback check_maps`
+
+```
+memback check_maps [-h] [-e DIR] [--m3itp ITP [ITP ...]] [--strict] [-v]
+```
+
+| Option | Meaning |
+| --- | --- |
+| `-e`, `--extension DIR` | Check the `.map`/`.bnd` files of this extension folder instead of the shipped databases. Its `.itp` files are used before the shipped ones. |
+| `--m3itp` | Extra Martini 3 `.itp` files to compare against; the shipped ones are always used. |
+| `--strict` | Exit with status 1 on warnings too, not only on errors. |
+| `-v`, `--verbose` | Also list lipids without issues. |
+
+See [Checking map files](#checking-map-files).
+
 ## Outputs
 
 Written into the output directory:
@@ -351,6 +366,43 @@ atoms, atoms in more than one bead, beads with no or more than 6 heavy atoms,
 and bonds to unknown beads. The command exits with status 1 if any check
 fails. Look at the result before using it, especially for unusual head groups
 or tails.
+
+### Checking map files
+
+`memback check_maps` checks `.map`/`.bnd` files against the lipids' CHARMM36
+and Martini 3 topologies, whether they were written by hand or by
+`memback create_map`. Run it on an extension folder before backmapping with it:
+
+```bash
+memback check_maps -e ./my_lipids
+```
+
+```
+[POPI14]
+  ERROR   atom O4 is in beads C3 and P4
+  WARNING hydrogens not in the CHARMM36 itp: ['HO4', 'HP42']
+
+3 lipids checked: 1 with errors, 0 with warnings.
+```
+
+**Errors** break backmapping or give a wrong structure: a lipid without a
+`.bnd` section, two different sections with the same name, an atom in more than
+one bead, a bead with no or more than 6 heavy atoms, a missing CHARMM36 `.itp`,
+heavy atoms that are in the map but not in the `.itp` or the other way round,
+beads that differ from the Martini 3 topology, and bonds to unknown beads.
+**Warnings** are worth a look: unknown or missing hydrogens (MemBack rebuilds
+hydrogens from the `.itp`), bead types, charges or bonds that differ from
+Martini 3, beads without bonds, and lipids with no Martini 3 topology to
+compare against. Massless virtual beads, such as `C4` of PI, are expected to be
+absent from maps. CHL1 is not compared with Martini 3 at all: cholesterol's
+virtual sites carry atoms and its `.bnd` uses its own bead graph, so only the
+CHARMM36 and `.bnd` checks apply to it (`M3_CHECK_EXEMPT` in
+`src/memback/check_maps.py`).
+
+The command exits with status 1 on errors (`--strict`: also on warnings). The
+shipped databases are checked the same way by the
+[Map integrity](.github/workflows/map-integrity.yml) GitHub Actions workflow
+whenever the maps or topologies change.
 
 Databases live under `src/memback/data/` and the checkpoint under
 `src/memback/model/`, both bundled as package data. `MEMBACK_ROOT` overrides
