@@ -64,3 +64,31 @@ jobs:
           files: ./coverage-integration.xml
           flags: integration,py${{ matrix.python-version }}
           fail_ci_if_error: true
+
+  map-integrity:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install MemBack without the model dependencies
+        run: |
+          pip install --no-deps -e .
+          pip install numpy
+
+      - name: Check map integrity
+        run: |
+          set -o pipefail
+          {
+            echo '## Map integrity'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          memback check_maps | tee -a "$GITHUB_STEP_SUMMARY" || status=$?
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $status

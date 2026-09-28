@@ -400,9 +400,9 @@ CHARMM36 and `.bnd` checks apply to it (`M3_CHECK_EXEMPT` in
 `src/memback/check_maps.py`).
 
 The command exits with status 1 on errors (`--strict`: also on warnings). The
-shipped databases are checked the same way by the
-[Map integrity](.github/workflows/map-integrity.yml) GitHub Actions workflow
-whenever the maps or topologies change.
+shipped databases are checked the same way in CI: the `map-integrity` job of
+the [Tests](.github/workflows/tests.yml) workflow runs `memback check_maps`
+once the unit tests pass, on every push and pull request.
 
 Databases live under `src/memback/data/` and the checkpoint under
 `src/memback/model/`, both bundled as package data. `MEMBACK_ROOT` overrides
