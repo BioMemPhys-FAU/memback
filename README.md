@@ -228,6 +228,28 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--device {auto,cpu,cuda}] [-V] input
 Only single frames are supported. To backmap a trajectory, extract frames first
 and run MemBack on each.
 
+### `memback create_map`
+
+```
+memback create_map [-h] --m3itp M3ITP [--m3name M3NAME] --aaitp AAITP
+                   [--aaname AANAME] [--refmap REFMAP] [--refres REFRES]
+                   [--name NAME] [--chainorder CHAIN [CHAIN ...]] [-o PREFIX]
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--m3itp` | Martini 3 `.itp` of the lipid. May hold several molecules. |
+| `--m3name` | Molecule to take from `--m3itp`; required when it holds more than one. |
+| `--aaitp` | CHARMM36 GROMACS `.itp` of the same lipid. |
+| `--aaname` | Molecule to take from `--aaitp`; required when it holds more than one. |
+| `--refmap` | Map containing a lipid with the same head group. Default: MemBack's own `all_maps.map`. |
+| `--refres` | Lipid in `--refmap` to copy the head group from. Default: chosen automatically. |
+| `--name` | Residue name written into the files. Default: the CHARMM molecule name. |
+| `--chainorder` | CHARMM chain for each Martini tail chain `A`, `B`, …. Default: taken from the reference lipid. |
+| `-o`, `--output PREFIX` | Writes `PREFIX.map` and `PREFIX.bnd`. Default: `./<name>`. |
+
+See [Creating map files](#creating-map-files).
+
 ## Outputs
 
 Written into the output directory:
@@ -281,6 +303,54 @@ PO4 GL1
                  ; blank line separates bonds from angles
 NC3 PO4 GL1      ; angles, three bead names per line
 ```
+
+### Creating map files
+
+`memback create_map` writes the `.map` and `.bnd` for a lipid from two
+topologies you usually already have: its Martini 3 `.itp` and its CHARMM36
+`.itp`. The same CHARMM `.itp` then goes into the extension folder for the
+topology step.
+
+```bash
+memback create_map --m3itp martini_v3.0.0_phospholipids_PC_v2.itp --m3name DAPC \
+                   --aaitp DAPC.itp -o my_lipids/DAPC
+cp DAPC.itp my_lipids/
+memback membrane_cg.gro -e ./my_lipids
+```
+
+```
+Martini 3 : DAPC (14 beads)   CHARMM36 : DAPC (138 atoms)
+Headgroup : ['NC3', 'PO4', 'GL1', 'GL2'] copied from DMPC
+Chain mapping (Martini → CHARMM): {'X': 'X', 'A': 'A', 'B': 'B'}
+Overmapped beads (+1 carbon): []
+Written: my_lipids/DAPC.map
+Written: my_lipids/DAPC.bnd
+All checks passed.
+```
+
+How the mapping is built:
+
+- **Head group.** Beads with non-carbon Martini types (`Q*`, `P*`, `N*`, …)
+  copy their atoms from a reference lipid that has exactly the same head-group
+  beads, found automatically in MemBack's `all_maps.map`. A lipid with a head
+  group MemBack does not know needs a reference: pass a map that contains one
+  with `--refmap` (and `--refres`).
+- **Tails.** Carbon beads take consecutive carbons along their CHARMM chain:
+  4 per regular bead, 3 per `S` bead, 2 per `T` bead. Martini 3 marks a bead
+  that covers one extra carbon with `*_5long` bond types (for example the first
+  bead of an oleoyl chain), and that bead gets 5. Hydrogens follow their carbon.
+- **Chains.** CHARMM tail carbons are recognised as `C2x`/`C3x` (sn-1/sn-2) or
+  by a trailing letter as in sphingolipids (`C1S`, `C4F`). Which CHARMM chain
+  belongs to Martini chain `A`, `B`, … is read from the reference lipid;
+  `--chainorder S F` overrides it.
+- **Bonds.** The `.bnd` takes bonds (including constraints) and angles from the
+  Martini 3 `.itp`. Massless virtual beads, such as `C4` of PI, are left out.
+
+The files are read back with MemBack's own readers and checked for unassigned
+atoms, atoms in more than one bead, beads with no or more than 6 heavy atoms,
+and bonds to unknown beads. The command exits with status 1 if any check
+fails. Look at the result before using it, especially for unusual head groups
+or tails.
 
 Databases live under `src/memback/data/` and the checkpoint under
 `src/memback/model/`, both bundled as package data. `MEMBACK_ROOT` overrides
@@ -368,7 +438,8 @@ Anything else needs an extension folder.
 ## Troubleshooting
 
 **`Residue XXXX not found in mapping. Skipping...`** — that residue has no
-`.map` entry and is dropped from the output. Supply it via `-e`.
+`.map` entry and is dropped from the output. Supply it via `-e`;
+`memback create_map` can generate the map (see [Creating map files](#creating-map-files)).
 
 **`error: MemBack data files are missing`** — the installation is incomplete,
 or `MEMBACK_ROOT` is set and points somewhere without `data/` and `model/`.

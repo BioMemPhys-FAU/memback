@@ -28,6 +28,13 @@ examples:
   # force CPU even on a CUDA machine
   memback membrane_cg.gro --device cpu
 
+  # create .map/.bnd files for a lipid MemBack does not cover
+  memback create_map --m3itp martini_PC.itp --m3name DAPC --aaitp DAPC.itp -o my_lipids/DAPC
+
+commands:
+  create_map   Build a .map/.bnd pair from a lipid's Martini 3 and CHARMM36
+               .itp files, for use with -e. See: memback create_map -h
+
 extension directory (-e):
   A folder holding any combination of the following, for lipids that are not
   in the built-in databases. Files are matched by suffix, not by name:
@@ -129,6 +136,13 @@ def resolve_device(choice: str):
 
 
 def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    # Subcommands are dispatched by hand so that `memback <input>` keeps working
+    # without a "backmap" subcommand in front of it.
+    if argv and argv[0] == "create_map":
+        from memback.create_map import main as create_map_main
+        return create_map_main(argv[1:])
+
     args = build_parser().parse_args(argv)
 
     if not args.input.exists():
