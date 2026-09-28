@@ -1,5 +1,11 @@
 """MemBack — neural backmapping of Martini 3 membranes to CHARMM36 all-atom."""
 
-__version__ = "0.1.1"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    # Set from the git tag at build time (setuptools-scm, see pyproject.toml).
+    __version__ = version("memback")
+except PackageNotFoundError:  # running from a source tree that is not installed
+    __version__ = "unknown"
 
 __all__ = ["__version__"]

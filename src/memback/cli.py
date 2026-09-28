@@ -127,7 +127,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Torch device. 'auto' uses CUDA when available. Default: auto.",
     )
     parser.add_argument(
-        "-V", "--version",
+        "-V", "-v", "--version",
         action="version",
         version=f"memback {__version__}",
     )
