@@ -16,9 +16,6 @@ MemBack predicts heavy-atom positions with an SE(3)-equivariant graph network
 chirality correction, clash relaxation, water and ion replacement, and a GROMACS
 topology with a minimisation script.
 
-> **Alpha release.** Interfaces may change between versions. Output is a raw
-> model prediction and must be energy-minimised before production MD.
-
 ---
 
 ## Requirements
@@ -27,10 +24,10 @@ topology with a minimisation script.
 - [PyTorch](https://pytorch.org/get-started/locally/) and
   [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html)
 - MDAnalysis, NumPy
-- GROMACS — only for the minimisation step, not for backmapping itself
+- GROMACS (only for the minimisation step, not for backmapping itself)
 
 A GPU is optional. The shipped checkpoint is small enough to run comfortably on
-CPU; CUDA is used automatically when available.
+CPU. CUDA is used automatically when available.
 
 ## Installation
 
@@ -124,7 +121,7 @@ The script runs three stages in sequence inside the output directory:
 2. **Equilibration.** Six consecutive runs, `step6.1_equilibration` through
    `step6.6_equilibration`, each starting from the previous one's output (the
    first from `min.gro`). Restraints are again referenced to
-   `backmapped_ordered.gro`; their strengths are set in the individual
+   `backmapped_ordered.gro`. Their strengths are set in the individual
    `step6.*_equilibration.mdp` files. These runs use `index.ndx`.
 3. **Chirality check.** `check_chirality.py` is run on the final frame,
    `step6.6_equilibration.gro`, to confirm that every lipid stereocentre has the
@@ -200,12 +197,12 @@ wrote step6.6_equilibration_chirfix.gro (4 atoms modified)
 Energy minimisation is recommended before running the next step.
 ```
 
-The summary counts (`correct`, `wrong sign`, …) describe the input structure;
-the `fixed` and `failed` lines report the outcome of the repair. For each
+The summary counts (`correct`, `wrong sign`, …) describe the input structure.
+The `fixed` and `failed` lines report the outcome of the repair. For each
 `wrong` or `flat` centre, only the centre atom is moved onto the correct face
 of its substituents and its hydrogen is re-placed. The substituents themselves
 are not touched, and every repair is re-checked. The result is written to
-`<input>_chirfix.gro` (change with `-o FILE`); velocities, header and box are
+`<input>_chirfix.gro` (change with `-o FILE`). Velocities, header and box are
 kept. Any `failed` entries should be inspected manually.
 
 **A restrained energy minimisation is required after fixing.** The repair
@@ -218,15 +215,15 @@ so the corrected structure must be relaxed before it is simulated further.
 memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cuda}] [-V] input
 ```
 
-| Option | Meaning |
-| --- | --- |
-| `input` | CG structure in any single-frame format MDAnalysis reads (`.gro`, `.pdb`, …). Must carry box dimensions — periodic images are used when building the graph. |
-| `-o`, `--output DIR` | Output directory. Default `<input stem>_backmapped`. |
-| `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases. |
-| `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`. |
+| Option | Meaning                                                                                                                                                                           |
+| --- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `input` | CG structure in any single-frame format MDAnalysis reads (`.gro`, `.pdb`, …). Must carry box dimensions. Periodic images are used when building the graph.                        |
+| `-o`, `--output DIR` | Output directory. Default `<input stem>_backmapped`.                                                                                                                              |
+| `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases.                                                                                         |
+| `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`.                                                                                                                       |
 | `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
-| `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. |
-| `-V`, `--version` | Print version and exit. |
+| `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible.                                                                                                       |
+| `-V`, `--version` | Print version and exit.                                                                                                                                                           |
 
 Only single frames are supported. To backmap a trajectory, extract frames first
 and run MemBack on each.
@@ -446,32 +443,32 @@ from memback.config import model_path
 model = EquivariantBackmap.from_checkpoint(model_path, map_location="cpu")
 ```
 
-`model(batch)` returns `[N_beads, max_atom_number, 3]` — displacements of each
+`model(batch)` returns `[N_beads, max_atom_number, 3]` which are displacements of each
 bead's heavy atoms relative to that bead's position. Slots beyond a bead's real
-atom count are padding; `data.mask` selects the valid ones.
+atom count are padding. `data.mask` selects the valid ones.
 
 ## How it works
 
-1. **Graph construction** — each lipid becomes a graph. Nodes are CG beads with
+1. **Graph construction:** each lipid becomes a graph. Nodes are CG beads with
    invariant features (Martini class, size, polarity, neighbour count, number of
    mapped heavy atoms); edges come from the `.bnd` bond definitions. Bead
    positions are stored relative to the lipid's centre of geometry, with the
    minimum-image convention applied.
-2. **Prediction** — all lipids are batched and passed through the equivariant
+2. **Prediction:** all lipids are batched and passed through the equivariant
    network. Geometry enters only through relative vectors and their norms, so
    predictions rotate and translate with the input; no rotational augmentation is
    needed.
-3. **Reconstruction** — predicted displacements are added back to bead positions
+3. **Reconstruction:** predicted displacements are added back to bead positions
    and the lipid centre of geometry, then assembled into an MDAnalysis universe
    with atom names read from the mapping.
-4. **Repair** — hydrogens placed with a Python port of the GROMACS `pdb2gmx`
+4. **Repair:** hydrogens placed with a Python port of the GROMACS `pdb2gmx`
    geometry routines driven by the `.hdb` database; chirality checked against
    improper dihedrals in the `.itp` files and inverted where wrong; residual
    clashes relaxed.
-5. **Solvent** — Martini water beads become tetrahedrally-arranged TIP3P
+5. **Solvent:** Martini water beads become tetrahedrally-arranged TIP3P
    molecules (4 per bead by default); Martini ion beads become their CHARMM
    equivalents.
-6. **Setup** — force field and lipid topologies copied into `toppar/`, topology
+6. **Setup:** force field and lipid topologies copied into `toppar/`, topology
    and minimisation input written.
 
 ## Model
@@ -491,31 +488,31 @@ depends on module paths.
 
 ## Coverage
 
-55 lipid types across PC, PE, PS, PG, PA, PI, SM, cardiolipin and cholesterol
+150 lipid types across PC, PE, PS, PG, PA, PI, SM, cardiolipin and cholesterol
 head groups, with 440 CHARMM lipid topologies available for the topology step.
 Anything else needs an extension folder.
 
 ## Troubleshooting
 
-**`error: no mapping for residue(s) in ...`** — those residues have no `.map`
+**`error: no mapping for residue(s) in ...`** Those residues have no `.map`
 entry. Create their maps with the `memback create_map` commands printed below
 the error (see [Creating map files](#creating-map-files)) and pass the folder
 with `-e`, or rerun with `--skip-missing` to drop them from the output
 (the run then prints `Skipping residues without a mapping: ...`).
 
-**`error: MemBack data files are missing`** — the installation is incomplete,
+**`error: MemBack data files are missing`** The installation is incomplete,
 or `MEMBACK_ROOT` is set and points somewhere without `data/` and `model/`.
 Unset that variable, or reinstall.
 
-**`Could not find XXXX.itp ... for forcefield`** — prediction succeeded but no
+**`Could not find XXXX.itp ... for forcefield`** Prediction succeeded but no
 CHARMM topology exists for that lipid, so `topol.top` will not grompp. Add the
 `.itp` to the extension folder.
 
-**`ModuleNotFoundError` on an old checkpoint** — checkpoints saved as whole
+**`ModuleNotFoundError` on an old checkpoint** Checkpoints saved as whole
 pickled objects store their class's module path. Re-save as a state dict, which
 is what the current format does.
 
-**CUDA out of memory** — all lipids are batched into a single forward pass. Use
+**CUDA out of memory** All lipids are batched into a single forward pass. Use
 `--device cpu` for very large systems.
 
 ## License
@@ -523,5 +520,5 @@ is what the current format does.
 MemBack is free software, licensed under the GNU General Public License v3.0 or later. See LICENSE for the full text.
 
 This applies to MemBack's own source code. The bundled force field, lipid topologies and mapping files come from other 
-projects and keep their own terms — see THIRD_PARTY.md for attribution, citation requests and a redistribution caveat 
+projects and keep their own terms (see THIRD_PARTY.md for attribution), citation requests and a redistribution caveat 
 regarding the CHARMM-GUI-generated topologies.
