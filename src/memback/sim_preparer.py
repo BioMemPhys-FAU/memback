@@ -35,7 +35,7 @@ while [ $cnt -le $cntmax ]; do
 done
 
 echo "Checking chiral centers with command python check_chirality.py step6.6_equilibration.gro ..."
-python check_chirality.py step6.6_equilibration.gro
+python3 check_chirality.py step6.6_equilibration.gro
 """
 
 def itps_prep(metadata, output_path, ext_path=None):

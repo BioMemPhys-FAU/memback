@@ -45,7 +45,7 @@ above.
 A virtual environment is recommended:
 
 ```bash
-python -m venv venv && source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate
 pip install memback
 ```
 
@@ -63,7 +63,7 @@ install (`-e`) picks up your changes without reinstalling:
 ```bash
 git clone https://github.com/BioMemPhys-FAU/memback.git
 cd memback
-python -m venv venv && source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate
 pip install -e .
 ```
 
@@ -136,7 +136,7 @@ unrestrained MD, so it is worth checking before production. `run_sim.sh` does
 this automatically, and you can run the check on any structure yourself:
 
 ```bash
-python check_chirality.py step6.6_equilibration.gro
+python3 check_chirality.py step6.6_equilibration.gro
 ```
 
 The reference handedness is taken from the ±120° dihedral restraints in
@@ -178,7 +178,7 @@ geometry that should be inspected by hand.
 Re-run the check with `--fix`:
 
 ```bash
-python check_chirality.py step6.6_equilibration.gro --fix
+python3 check_chirality.py step6.6_equilibration.gro --fix
 ```
 
 ```
