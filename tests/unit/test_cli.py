@@ -171,7 +171,7 @@ def test_check_bead_names_reports_renamed_lipid(make_universe, shipped_mapping):
     from memback.pipeline import check_bead_names
 
     u = _bead_universe(make_universe, [("POPI13", DPPC_BEADS)])
-    mismatches, _ = check_bead_names(u, shipped_mapping, {"POPI13": "POP1"})
+    mismatches, _ = check_bead_names(u, shipped_mapping, ["POP1"])
     assert len(mismatches) == 1
     m = mismatches[0]
     assert m["resname"] == "POP1" and m["mapped_as"] == "POPI13"
@@ -246,3 +246,36 @@ def test_main_bead_mismatch_explains_the_problem(tmp_path):
     assert "POP1 (read as POPI13" in message
     assert "missing     : C1 C2 C3 P3 D2A" in message
     assert "DPPC" in message
+
+
+def test_parse_rename():
+    from memback.cli import parse_rename
+
+    assert build_parser().parse_args(["x.gro", "--rename", "POP1=DPPC", "--rename", "A=B"]).rename \
+        == [("POP1", "DPPC"), ("A", "B")]
+    for bad in ["POP1", "=DPPC", "POP1=", "A=B=C"]:
+        with pytest.raises(Exception):
+            parse_rename(bad)
+
+
+def test_rename_residues_applies_all_at_once(make_universe):
+    from memback.pipeline import rename_residues
+
+    u = make_universe(["NC3", "NC3", "NC3"], ["A", "B", "C"], [0, 1, 2], [[0, 0, 0]] * 3)
+    assert rename_residues(u, {"A": "B", "B": "C", "X": "Y"}) == ["X"]
+    assert list(u.residues.resnames) == ["B", "C", "C"]
+
+
+def test_main_rename_fixes_renamed_lipid(tmp_path, monkeypatch):
+    import memback.pipeline as pipeline
+
+    seen = {}
+    def fake_input_handler(universe, mapping, bnd_map):
+        seen["resnames"] = set(universe.residues.resnames)
+        raise RuntimeError("stop after the checks")
+    monkeypatch.setattr(pipeline, "input_handler_single_frame", fake_input_handler)
+
+    gro = _gro_with_renamed_lipid(tmp_path / "in.gro")
+    with pytest.raises(RuntimeError, match="stop after the checks"):
+        main([str(gro), "-o", str(tmp_path / "out"), "--device", "cpu", "--rename", "POP1=DPPC"])
+    assert seen["resnames"] == {"DPPC"}

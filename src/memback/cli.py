@@ -25,6 +25,9 @@ examples:
   # add lipids the shipped databases do not cover
   memback membrane_cg.gro -e ./my_lipids
 
+  # backmap residues named POP1 in the input as DPPC
+  memback membrane_cg.gro --rename POP1=DPPC
+
   # force CPU even on a CUDA machine
   memback membrane_cg.gro --device cpu
 
@@ -122,6 +125,18 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--rename",
+        type=parse_rename,
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help=(
+            "Read residues named OLD in the input as NEW, e.g. --rename POP1=DPPC "
+            "for a DPPC that was renamed in the simulation. NEW is a Martini 3 "
+            "name and is also used in the output. Repeat for more lipids."
+        ),
+    )
+    parser.add_argument(
         "--device",
         choices=("auto", "cpu", "cuda"),
         default="auto",
@@ -136,6 +151,15 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"memback {__version__}",
     )
     return parser
+
+
+def parse_rename(value: str):
+    """'OLD=NEW' -> (OLD, NEW), for --rename."""
+    old, sep, new = value.partition("=")
+    old, new = old.strip(), new.strip()
+    if not sep or not old or not new or "=" in new:
+        raise argparse.ArgumentTypeError(f"expected OLD=NEW, got {value!r}")
+    return old, new
 
 
 def resolve_device(choice: str):
@@ -212,7 +236,7 @@ def bead_mismatch_message(mismatches, input_path) -> str:
     for m in mismatches:
         name = m["resname"]
         if m["mapped_as"] != name:
-            name += f" (read as {m['mapped_as']}, the CHARMM36 name of Martini 3 {m['resname']})"
+            name += f" (read as {m['mapped_as']})"
         lines += [
             "",
             f"  [{name}] {m['n_residues']} residue(s), e.g. resid {m['example_resid']}",
@@ -230,9 +254,10 @@ def bead_mismatch_message(mismatches, input_path) -> str:
     lines += [
         "",
         "Residue names select the map, so a renamed lipid is backmapped as another one.",
-        "Rename the residues to their Martini 3 name, put the beads in the map order,",
-        "or provide a matching map for this residue name with -e (check it with",
-        "memback check_maps -e DIR). These residues are not skipped by --skip-missing.",
+        "Read them as the right lipid with --rename OLD=NEW (e.g. --rename POP1=DPPC),",
+        "put the beads in the map order, or provide a matching map for this residue",
+        "name with -e (check it with memback check_maps -e DIR). These residues are",
+        "not skipped by --skip-missing.",
     ]
     return "\n".join(lines)
 
@@ -285,6 +310,8 @@ def main(argv=None) -> int:
     print(f"  output     {output}")
     print(f"  model      {model}")
     print(f"  device     {describe_device(device)}")
+    if args.rename:
+        print(f"  rename     {', '.join(f'{old}={new}' for old, new in args.rename)}")
     if args.extension:
         print(f"  extension  {args.extension}")
     print()
@@ -298,6 +325,7 @@ def main(argv=None) -> int:
             # "auto" lets the pipeline fall back to the CPU if the GPU is full.
             device="auto" if args.device == "auto" else device,
             skip_missing=args.skip_missing,
+            rename=dict(args.rename),
         )
     except MissingMappingError as err:
         raise SystemExit(missing_mapping_message(err.resnames, args.input, args.extension))
