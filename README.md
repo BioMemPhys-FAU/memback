@@ -212,7 +212,7 @@ so the corrected structure must be relaxed before it is simulated further.
 ## Command-line options
 
 ```
-memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cuda}] [-V] input
+memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--rename OLD=NEW] [--device {auto,cpu,cuda}] [-V] input
 ```
 
 | Option | Meaning                                                                                                                                                                           |
@@ -222,6 +222,7 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cu
 | `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases.                                                                                         |
 | `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`.                                                                                                                       |
 | `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
+| `--rename OLD=NEW` | Read residues named `OLD` as the Martini 3 lipid `NEW`, e.g. `--rename POP1=DPPC`. Repeat for more lipids. See [Renamed lipids](#renamed-lipids). |
 | `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. `auto` uses CUDA when visible and continues on the CPU if the GPU has no free memory.                |
 | `-V`, `--version` | Print version and exit.                                                                                                                                                           |
 
@@ -414,6 +415,22 @@ Residue naming differences between Martini 3 and CHARMM (`CHOL` → `CHL1`,
 `martini3_to_charmm_lipids` in `src/memback/config.py`. Water (`W`) and ions
 (`ION`) are excluded from prediction and rebuilt separately.
 
+### Renamed lipids
+
+MemBack picks a lipid's map by its residue name. Before backmapping, it checks
+the bead names and their order in every lipid against that map. If a lipid was
+renamed in your simulation (for example POPC saved as `POP1`, which is the
+Martini 3 name of a PI lipid), MemBack stops with an error, and the error lists
+the maps the beads do match. Give the lipid its real name with `--rename`:
+
+```bash
+memback membrane_cg.gro --rename POP1=DPPC --rename LIP2=POPE
+```
+
+`NEW` is a Martini 3 name and is used in the output. All renames are applied
+together, so they never chain, and each renamed lipid is checked against its
+new map.
+
 ## Python API
 
 ```python
@@ -426,12 +443,15 @@ backmapping(
     model_path=None,              # optional; defaults to the shipped checkpoint
     device=None,                  # optional; defaults to CUDA when available
     skip_missing=False,           # optional; True leaves out residues without a mapping
+    rename={"POP1": "DPPC"},      # optional; read residue names as other Martini 3 lipids
 )
 ```
 
 Residues without a mapping raise `memback.pipeline.MissingMappingError`
 (its `resnames` attribute lists them) before anything is written, unless
-`skip_missing=True`.
+`skip_missing=True`. Residues whose beads do not match their map raise
+`memback.pipeline.BeadMismatchError` (see its `mismatches` attribute), even
+with `skip_missing=True`.
 
 Loading the model on its own:
 
@@ -499,6 +519,12 @@ entry. Create their maps with the `memback create_map` commands printed below
 the error (see [Creating map files](#creating-map-files)) and pass the folder
 with `-e`, or rerun with `--skip-missing` to drop them from the output
 (the run then prints `Skipping residues without a mapping: ...`).
+
+**`error: bead names in ... do not match the MemBack map`** A residue's beads
+are missing from its map, duplicated, or in a different order. Usually the lipid
+was renamed. Rerun with `--rename OLD=NEW`, using one of the lipids the error
+lists as matching, or provide a matching map with `-e`
+(see [Renamed lipids](#renamed-lipids)).
 
 **`error: MemBack data files are missing`** The installation is incomplete,
 or `MEMBACK_ROOT` is set and points somewhere without `data/` and `model/`.
