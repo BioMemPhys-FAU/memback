@@ -22,7 +22,7 @@ See README.md for full details.
 ----------
 From PyPI (recommended, ideally inside a virtual environment):
 
-    python -m venv venv && source venv/bin/activate
+    python3 -m venv venv && source venv/bin/activate
     pip install memback
 
 torch and torch-geometric are installed automatically. If you need a
@@ -59,12 +59,12 @@ run_sim.sh runs, in order:
 
 Check any structure yourself:
 
-    python check_chirality.py step6.6_equilibration.gro
+    python3 check_chirality.py step6.6_equilibration.gro
 
 If the `wrong` and `flat` columns are all zero, nothing needs to be done.
 Otherwise repair with:
 
-    python check_chirality.py step6.6_equilibration.gro --fix
+    python3 check_chirality.py step6.6_equilibration.gro --fix
 
 This writes `step6.6_equilibration_chirfix.gro` (change with `-o FILE`).
 Run a restrained energy minimisation on the fixed structure before
@@ -140,7 +140,8 @@ follow PyCGTOOL conventions; see "Extending to new lipids" in README.md.
       No CHARMM topology for that lipid; add the .itp via -e (section 6).
 
   CUDA out of memory
-      Use --device cpu for very large systems.
+      When the GPU runs out of memory: `--device auto` then continues on the CPU, 
+      `--device cuda` stops. Use `--device cpu` to avoid the retries.
 
 
 For output files, adding new lipids, the Python API and how the model works,

@@ -124,7 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--device",
         choices=("auto", "cpu", "cuda"),
         default="auto",
-        help="Torch device. 'auto' uses CUDA when available. Default: auto.",
+        help=(
+            "Torch device. 'auto' uses CUDA when available and continues on the "
+            "CPU if the system does not fit in the free GPU memory. Default: auto."
+        ),
     )
     parser.add_argument(
         "-V", "-v", "--version",
@@ -146,6 +149,20 @@ def resolve_device(choice: str):
     if choice == "cpu":
         return torch.device("cpu")
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def describe_device(device) -> str:
+    """Device line for the run header, with GPU name and free memory on CUDA."""
+    if device.type != "cuda":
+        return str(device)
+    import torch
+
+    try:
+        free, total = torch.cuda.mem_get_info(device)
+        name = torch.cuda.get_device_name(device)
+        return f"{device} ({name}, {free / 2**30:.1f} of {total / 2**30:.1f} GiB free)"
+    except RuntimeError:
+        return str(device)
 
 
 def missing_mapping_message(resnames, input_path, extension=None) -> str:
@@ -235,7 +252,7 @@ def main(argv=None) -> int:
     print(f"  input      {args.input}")
     print(f"  output     {output}")
     print(f"  model      {model}")
-    print(f"  device     {device}")
+    print(f"  device     {describe_device(device)}")
     if args.extension:
         print(f"  extension  {args.extension}")
     print()
@@ -246,7 +263,8 @@ def main(argv=None) -> int:
             model_path=str(model),
             filename=str(output),
             ext_path=str(args.extension) if args.extension else None,
-            device=device,
+            # "auto" lets the pipeline fall back to the CPU if the GPU is full.
+            device="auto" if args.device == "auto" else device,
             skip_missing=args.skip_missing,
         )
     except MissingMappingError as err:
