@@ -222,7 +222,7 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--device {auto,cpu,cu
 | `-e`, `--extension DIR` | Folder of extra `.map` / `.bnd` / `.itp` files for lipids outside the built-in databases.                                                                                         |
 | `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`.                                                                                                                       |
 | `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
-| `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible.                                                                                                       |
+| `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. `auto` uses CUDA when visible and continues on the CPU if the GPU has no free memory.                |
 | `-V`, `--version` | Print version and exit.                                                                                                                                                           |
 
 Only single frames are supported. To backmap a trajectory, extract frames first
@@ -512,8 +512,8 @@ CHARMM topology exists for that lipid, so `topol.top` will not grompp. Add the
 pickled objects store their class's module path. Re-save as a state dict, which
 is what the current format does.
 
-**CUDA out of memory** All lipids are batched into a single forward pass. Use
-`--device cpu` for very large systems.
+**CUDA out of memory** When the GPU runs out of memory: `--device auto` then continues on the CPU, 
+`--device cuda` stops. Use `--device cpu` to avoid the retries.
 
 ## License
 

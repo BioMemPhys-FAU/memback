@@ -89,17 +89,40 @@ def universe_creator(result, mapping, dimensions):
 
     return u
 
-def prediction(model, data, mapping, device, no_universe=False):
-    s = time.time()
-    model.eval()
-
-    batch = Batch.from_data_list(data["pred_data"]).to(device)
+def _predict_all(model, graphs, device):
+    """Absolute heavy-atom positions for every lipid, in a single forward pass."""
+    batch = Batch.from_data_list(graphs).to(device)
     with torch.no_grad():
         pred = model(batch)
         node_preds_per_graph = unbatch(pred, batch.batch)
         mask_per_graph = unbatch(batch.mask, batch.batch)
         bead_pos = unbatch(batch.pos, batch.batch)
-        prediction_per_lipid = [((each + bead_pos[i][:,np.newaxis,:])[mask_per_graph[i]].detach().cpu() + data["pred_data"][i].center_of_geometry).numpy() for i, each in enumerate(node_preds_per_graph)]
+        return [((each + bead_pos[i][:,np.newaxis,:])[mask_per_graph[i]].detach().cpu() + graphs[i].center_of_geometry).numpy() for i, each in enumerate(node_preds_per_graph)]
+
+def prediction(model, data, mapping, device, no_universe=False, cpu_fallback=False):
+    s = time.time()
+    model.eval()
+
+    device = torch.device(device)
+    out_of_memory = False
+    try:
+        prediction_per_lipid = _predict_all(model, data["pred_data"], device)
+    except torch.cuda.OutOfMemoryError:
+        out_of_memory = True
+    if out_of_memory:
+        torch.cuda.empty_cache()
+        if not cpu_fallback:
+            raise RuntimeError(
+                f"CUDA out of memory: all {len(data['pred_data'])} lipids are predicted in a "
+                "single forward pass and the system does not fit in the free GPU memory. "
+                "Rerun with --device cpu (or --device auto to fall back automatically)."
+            )
+        print(f"CUDA out of memory: {len(data['pred_data'])} lipids do not fit in the free "
+              "GPU memory. Continuing on the CPU.")
+        device = torch.device("cpu")
+        model.to(device)
+        prediction_per_lipid = _predict_all(model, data["pred_data"], device)
+
     result = {"pred_data": data["pred_data"], "pred_result": prediction_per_lipid}
     if no_universe:
         return result
@@ -212,7 +235,9 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     model_path   : checkpoint; defaults to the version shipped in model/
     filename     : output directory; defaults to <input stem>_backmapped
     ext_path     : optional directory of extra .map / .bnd / .itp files
-    device       : torch.device; defaults to CUDA when available
+    device       : torch.device, "cpu", "cuda" or "auto"/None (default). Auto
+                   uses CUDA when available and falls back to the CPU if the
+                   system does not fit in the free GPU memory.
     skip_missing : leave out residues without a mapping instead of raising
                    MissingMappingError (raised before anything is written)
     """
@@ -220,7 +245,8 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
         model_path = default_model_path
     if filename is None:
         filename = f"{Path(input_path).stem}_backmapped"
-    if device is None:
+    auto_device = device is None or device == "auto"
+    if auto_device:
         device = get_torch_device()
 
     start_time = time.time()
@@ -246,7 +272,7 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
 
     input_data = input_handler_single_frame(input_uni, mapping, bnd_map)
     model = EquivariantBackmap.from_checkpoint(model_path, map_location=device)
-    res_uni = prediction(model, input_data, mapping, device)
+    res_uni = prediction(model, input_data, mapping, device, cpu_fallback=auto_device)
     itp = read_itp_directory(itp_db_path, np.unique(res_uni.residues.resnames))
     if ext_path is not None:
         itp_ext = read_itp_directory(ext_path, np.unique(res_uni.residues.resnames))
@@ -263,4 +289,3 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     sim_preparer(res_uni_water_ions, filename, pred_path=pred_path, ext_path=ext_path)
     end_time = time.time()
     print(f"Backmapping took {end_time - start_time:.2f} seconds. {input_path}")
-

@@ -140,7 +140,8 @@ follow PyCGTOOL conventions; see "Extending to new lipids" in README.md.
       No CHARMM topology for that lipid; add the .itp via -e (section 6).
 
   CUDA out of memory
-      Use --device cpu for very large systems.
+      When the GPU runs out of memory: `--device auto` then continues on the CPU, 
+      `--device cuda` stops. Use `--device cpu` to avoid the retries.
 
 
 For output files, adding new lipids, the Python API and how the model works,
