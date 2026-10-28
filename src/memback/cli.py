@@ -117,7 +117,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Leave out residues that have no mapping instead of stopping. "
-            "By default MemBack stops and suggests memback create_map commands."
+            "By default MemBack stops and suggests memback create_map commands. "
+            "Residues whose beads do not match their map are never skipped."
         ),
     )
     parser.add_argument(
@@ -205,6 +206,37 @@ def missing_mapping_message(resnames, input_path, extension=None) -> str:
     return "\n".join(lines)
 
 
+def bead_mismatch_message(mismatches, input_path) -> str:
+    """Explain which residues have beads that do not match their .map entry."""
+    lines = [f"error: bead names in {input_path} do not match the MemBack map:"]
+    for m in mismatches:
+        name = m["resname"]
+        if m["mapped_as"] != name:
+            name += f" (read as {m['mapped_as']}, the CHARMM36 name of Martini 3 {m['resname']})"
+        lines += [
+            "",
+            f"  [{name}] {m['n_residues']} residue(s), e.g. resid {m['example_resid']}",
+            f"    input beads : {' '.join(m['input_beads'])}",
+            f"    map beads   : {' '.join(m['map_beads'])}",
+        ]
+        if m["missing"]:
+            lines.append(f"    missing     : {' '.join(m['missing'])}")
+        if m["duplicated"]:
+            lines.append(f"    duplicated  : {' '.join(m['duplicated'])}")
+        if m["order_wrong"]:
+            lines.append("    order       : same beads as the map, but in a different order")
+        if m["candidates"]:
+            lines.append(f"    the input beads match the map(s) of: {', '.join(m['candidates'])}")
+    lines += [
+        "",
+        "Residue names select the map, so a renamed lipid is backmapped as another one.",
+        "Rename the residues to their Martini 3 name, put the beads in the map order,",
+        "or provide a matching map for this residue name with -e (check it with",
+        "memback check_maps -e DIR). These residues are not skipped by --skip-missing.",
+    ]
+    return "\n".join(lines)
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     # Subcommands are dispatched by hand so that `memback <input>` keeps working
@@ -228,7 +260,7 @@ def main(argv=None) -> int:
     # Imported late so that --help and --version stay fast and do not require
     # torch to be importable.
     from memback.config import check_data_files, model_path as default_model_path
-    from memback.pipeline import MissingMappingError, backmapping
+    from memback.pipeline import BeadMismatchError, MissingMappingError, backmapping
 
     missing = check_data_files()
     if missing:
@@ -269,6 +301,8 @@ def main(argv=None) -> int:
         )
     except MissingMappingError as err:
         raise SystemExit(missing_mapping_message(err.resnames, args.input, args.extension))
+    except BeadMismatchError as err:
+        raise SystemExit(bead_mismatch_message(err.mismatches, args.input))
 
     print()
     print(f"Done. Source your preferred GROMACS version. Later, minimise and equilibrate before production MD:")

@@ -23,7 +23,8 @@ from memback.structure_repair.fix_clashes import fix_clashes
 from memback.structure_repair.fix_chirality import fix_chirality
 from memback.io.read_sim_metadata import read_hdb, read_itp_directory
 
-__all__ = ["backmapping", "EquivariantBackmap", "MissingMappingError"]
+__all__ = ["backmapping", "EquivariantBackmap", "MissingMappingError", "BeadMismatchError",
+           "check_bead_names"]
 
 
 class MissingMappingError(ValueError):
@@ -35,9 +36,64 @@ class MissingMappingError(ValueError):
             f".map/.bnd via ext_path or pass skip_missing=True to leave them out"
         )
 
+class BeadMismatchError(ValueError):
+    """Residues whose bead names or bead order differ from their .map entry."""
+    def __init__(self, mismatches):
+        self.mismatches = list(mismatches)
+        super().__init__(
+            "bead names do not match the map of residue(s) "
+            + ", ".join(m["resname"] for m in self.mismatches)
+        )
+
 def find_missing_mappings(universe, mapping):
     """Residue names in the universe with no mapping, water and ions excluded."""
     return sorted(set(universe.residues.resnames) - set(mapping) - set(martini3_excluded_residues))
+
+def check_bead_names(universe, mapping, original_names=None):
+    """
+    Compare the beads of every mapped residue with its .map section.
+
+    Returns (mismatches, notes). A mismatch is a residue layout with map beads
+    missing, duplicated or out of map order; the pipeline would otherwise drop
+    beads by name and silently mix up features and atom names. Notes list input
+    beads that are not in the map (e.g. massless virtual beads), which are ignored.
+    """
+    original_names = original_names or {}
+    layouts = {}
+    for residue in universe.residues:
+        if residue.resname in mapping:
+            key = (residue.resname, tuple(residue.atoms.names))
+            layouts.setdefault(key, []).append(residue.resid)
+
+    mismatches, notes = [], {}
+    for (resname, beads), resids in layouts.items():
+        map_beads = list(mapping[resname]["atoms"])
+        missing = [b for b in map_beads if b not in beads]
+        duplicated = [b for b in map_beads if beads.count(b) > 1]
+        extra = [b for b in beads if b not in map_beads]
+        order_wrong = (not missing and not duplicated
+                       and [b for b in beads if b in map_beads] != map_beads)
+        if not (missing or duplicated or order_wrong):
+            if extra:
+                notes.setdefault(resname, set()).update(extra)
+            continue
+        candidates = [name for name, m in mapping.items() if list(m["atoms"]) == list(beads)]
+        if not candidates:
+            candidates = [name for name, m in mapping.items()
+                          if name != resname and set(m["atoms"]) == set(beads)]
+        mismatches.append({
+            "resname": original_names.get(resname, resname),
+            "mapped_as": resname,
+            "example_resid": resids[0],
+            "n_residues": len(resids),
+            "input_beads": list(beads),
+            "map_beads": map_beads,
+            "missing": missing,
+            "duplicated": duplicated,
+            "order_wrong": order_wrong,
+            "candidates": candidates,
+        })
+    return mismatches, {name: sorted(extra) for name, extra in notes.items()}
 
 def universe_creator(result, mapping, dimensions):
     lipid_atoms = {resname: [name for each in list(res_map['atoms'].values()) for name in each] for resname, res_map in mapping.items()}
@@ -259,15 +315,23 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     input_uni = mda.Universe(input_path, to_guess=[])
     # Handle naming differences
     unique_resnames = set(input_uni.residues.resnames)
+    original_names = {}
     for resname in unique_resnames:
         if resname in martini3_to_charmm_lipids:
             input_uni.select_atoms(f"resname {resname}").residues.resnames = martini3_to_charmm_lipids[resname]
+            original_names[martini3_to_charmm_lipids[resname]] = resname
 
     missing = find_missing_mappings(input_uni, mapping)
     if missing and not skip_missing:
         raise MissingMappingError(missing)
     if missing:
         print(f"Skipping residues without a mapping: {', '.join(missing)}")
+    # Mismatched beads are never skipped: they mean a wrong map or a renamed lipid.
+    mismatches, notes = check_bead_names(input_uni, mapping, original_names)
+    if mismatches:
+        raise BeadMismatchError(mismatches)
+    for resname, extra in notes.items():
+        print(f"Ignoring input beads not in the {resname} map: {' '.join(extra)}")
     os.makedirs(filename, exist_ok=True)
 
     input_data = input_handler_single_frame(input_uni, mapping, bnd_map)
