@@ -22,6 +22,8 @@ from memback.sim_preparer import sim_preparer
 from memback.structure_repair.fix_clashes import fix_clashes
 from memback.structure_repair.fix_chirality import fix_chirality
 from memback.io.read_sim_metadata import read_hdb, read_itp_directory
+from memback.protein_backmap import (PROTEIN_SELECTION, add_protein,  # prot-back
+                                     protein_resnames, run_cg2at)  # prot-back
 
 __all__ = ["backmapping", "EquivariantBackmap", "MissingMappingError", "BeadMismatchError",
            "check_bead_names", "rename_residues"]
@@ -45,9 +47,10 @@ class BeadMismatchError(ValueError):
             + ", ".join(m["resname"] for m in self.mismatches)
         )
 
-def find_missing_mappings(universe, mapping):
-    """Residue names in the universe with no mapping, water and ions excluded."""
-    return sorted(set(universe.residues.resnames) - set(mapping) - set(martini3_excluded_residues))
+def find_missing_mappings(universe, mapping, exclude=()):
+    """Residue names in the universe with no mapping, water, ions and exclude left out."""
+    return sorted(set(universe.residues.resnames) - set(mapping)
+                  - set(martini3_excluded_residues) - set(exclude))
 
 def rename_residues(universe, rename):
     resnames = universe.residues.resnames
@@ -284,7 +287,7 @@ def get_torch_device():
 
 
 def backmapping(input_path, model_path=None, filename=None, ext_path=None, device=None,
-                skip_missing=False, rename=None):
+                skip_missing=False, rename=None, prot_back=None, prot_back_args=()):
     """
     Backmap a single-frame coarse-grained structure to all-atom.
 
@@ -299,6 +302,8 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
                    MissingMappingError (raised before anything is written)
     rename       : {old: new} residue names applied to the input first, e.g.
                    {"POP1": "DPPC"}; new names are read as Martini 3 names
+    prot_back    : temporary; CG2AT2 executable that backmaps the protein,
+                   prot_back_args are extra CG2AT2 arguments (see protein_backmap.py)
     """
     if model_path is None:
         model_path = default_model_path
@@ -329,7 +334,8 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
         if resname in martini3_to_charmm_lipids:
             input_uni.select_atoms(f"resname {resname}").residues.resnames = martini3_to_charmm_lipids[resname]
 
-    missing = find_missing_mappings(input_uni, mapping)
+    protein_names = protein_resnames(input_uni) if prot_back else ()  # prot-back
+    missing = find_missing_mappings(input_uni, mapping, exclude=protein_names)
     if missing and not skip_missing:
         raise MissingMappingError(missing)
     if missing:
@@ -342,6 +348,12 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
         print(f"Ignoring input beads not in the {resname} map: {' '.join(extra)}")
     os.makedirs(filename, exist_ok=True)
 
+    protein_result = None  # prot-back
+    if protein_names:  # prot-back
+        protein_result = run_cg2at(prot_back, input_uni.select_atoms(PROTEIN_SELECTION),  # prot-back
+                                   Path(filename) / "protein_cg2at", prot_back_args)  # prot-back
+    elif prot_back:  # prot-back
+        print("WARNING: --prot-back given but the input has no protein residues.")  # prot-back
     input_data = input_handler_single_frame(input_uni, mapping, bnd_map)
     model = EquivariantBackmap.from_checkpoint(model_path, map_location=device)
     res_uni = prediction(model, input_data, mapping, device, cpu_fallback=auto_device)
@@ -359,5 +371,8 @@ def backmapping(input_path, model_path=None, filename=None, ext_path=None, devic
     res_uni_water_ions.atoms.write(pred_path)
 
     sim_preparer(res_uni_water_ions, filename, pred_path=pred_path, ext_path=ext_path)
+    if protein_result is not None:  # prot-back
+        add_protein(filename, res_uni_water_ions, *protein_result,  # prot-back
+                    pred_name=os.path.basename(pred_path))  # prot-back
     end_time = time.time()
     print(f"Backmapping took {end_time - start_time:.2f} seconds. {input_path}")
