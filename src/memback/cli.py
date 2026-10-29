@@ -8,6 +8,8 @@ name of this file.
 
 import argparse
 import os
+import shlex
+import shutil
 import sys
 from pathlib import Path
 
@@ -27,6 +29,10 @@ examples:
 
   # backmap residues named POP1 in the input as DPPC
   memback membrane_cg.gro --rename POP1=DPPC
+
+  # backmap the protein with CG2AT2 (temporary, until MemBack supports proteins)
+  memback membrane_cg.gro --prot-back cg2at
+  memback membrane_cg.gro --prot-back /path/to/cg2at --prot-back-args "-fg martini_2-2_charmm36"
 
   # force CPU even on a CUDA machine
   memback membrane_cg.gro --device cpu
@@ -136,6 +142,29 @@ def build_parser() -> argparse.ArgumentParser:
             "name and is also used in the output. Repeat for more lipids."
         ),
     )
+    # prot-back: temporary CG2AT2 protein backmapping, see protein_backmap.py
+    parser.add_argument(
+        "--prot-back", "--prot_back",
+        dest="prot_back",
+        default=None,
+        metavar="CG2AT",
+        help=(
+            "Temporary, until MemBack supports proteins: backmap the protein with "
+            "this CG2AT2 executable (path or command name) and merge it into the "
+            "output. MemBack still backmaps everything else."
+        ),
+    )
+    parser.add_argument(
+        "--prot-back-args", "--prot_back_args",
+        dest="prot_back_args",
+        default=None,
+        metavar="ARGS",
+        help=(
+            "Extra CG2AT2 arguments as one quoted string, e.g. "
+            "\"-fg martini_2-2_charmm36\". They override the defaults "
+            "(-ff charmm36-cg2at -fg martini_3-0_charmm36 -w tip3p -o none -silent)."
+        ),
+    )
     parser.add_argument(
         "--device",
         choices=("auto", "cpu", "cuda"),
@@ -227,6 +256,10 @@ def missing_mapping_message(resnames, input_path, extension=None) -> str:
         "",
         "Or rerun with --skip-missing to leave these residues out of the output.",
     ]
+    from MDAnalysis.core.selection import ProteinSelection  # prot-back
+    if set(resnames) & set(ProteinSelection.prot_res):  # prot-back
+        lines += ["Protein residues can be backmapped with CG2AT2 (temporary):",  # prot-back
+                  f"  memback {input_path} --prot-back <path to cg2at>"]  # prot-back
     return "\n".join(lines)
 
 
@@ -281,11 +314,20 @@ def main(argv=None) -> int:
         raise SystemExit(f"error: extension path is not a directory: {args.extension}")
     if args.model is not None and not args.model.exists():
         raise SystemExit(f"error: model checkpoint not found: {args.model}")
+    prot_back = None  # prot-back
+    if args.prot_back_args is not None and args.prot_back is None:  # prot-back
+        raise SystemExit("error: --prot-back-args needs --prot-back")  # prot-back
+    if args.prot_back is not None:  # prot-back
+        prot_back = shutil.which(args.prot_back)  # prot-back
+        if prot_back is None:  # prot-back
+            raise SystemExit(f"error: CG2AT2 executable not found: {args.prot_back}")  # prot-back
+        prot_back = os.path.abspath(prot_back)  # prot-back
 
     # Imported late so that --help and --version stay fast and do not require
     # torch to be importable.
     from memback.config import check_data_files, model_path as default_model_path
     from memback.pipeline import BeadMismatchError, MissingMappingError, backmapping
+    from memback.protein_backmap import ProteinBackmapError  # prot-back
 
     missing = check_data_files()
     if missing:
@@ -312,6 +354,8 @@ def main(argv=None) -> int:
     print(f"  device     {describe_device(device)}")
     if args.rename:
         print(f"  rename     {', '.join(f'{old}={new}' for old, new in args.rename)}")
+    if prot_back:  # prot-back
+        print(f"  protein    CG2AT2 {prot_back} {args.prot_back_args or ''}".rstrip())
     if args.extension:
         print(f"  extension  {args.extension}")
     print()
@@ -326,11 +370,15 @@ def main(argv=None) -> int:
             device="auto" if args.device == "auto" else device,
             skip_missing=args.skip_missing,
             rename=dict(args.rename),
+            prot_back=prot_back,  # prot-back
+            prot_back_args=shlex.split(args.prot_back_args or ""),  # prot-back
         )
     except MissingMappingError as err:
         raise SystemExit(missing_mapping_message(err.resnames, args.input, args.extension))
     except BeadMismatchError as err:
         raise SystemExit(bead_mismatch_message(err.mismatches, args.input))
+    except ProteinBackmapError as err:  # prot-back
+        raise SystemExit(f"error: {err}")  # prot-back
 
     print()
     print(f"Done. Source your preferred GROMACS version. Later, minimise and equilibrate before production MD:")
