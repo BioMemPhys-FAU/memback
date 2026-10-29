@@ -25,6 +25,9 @@ examples:
   # add lipids the shipped databases do not cover
   memback membrane_cg.gro -e ./my_lipids
 
+  # backmap residues named POP1 in the input as DPPC
+  memback membrane_cg.gro --rename POP1=DPPC
+
   # force CPU even on a CUDA machine
   memback membrane_cg.gro --device cpu
 
@@ -117,7 +120,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Leave out residues that have no mapping instead of stopping. "
-            "By default MemBack stops and suggests memback create_map commands."
+            "By default MemBack stops and suggests memback create_map commands. "
+            "Residues whose beads do not match their map are never skipped."
+        ),
+    )
+    parser.add_argument(
+        "--rename",
+        type=parse_rename,
+        action="append",
+        default=[],
+        metavar="OLD=NEW",
+        help=(
+            "Read residues named OLD in the input as NEW, e.g. --rename POP1=DPPC "
+            "for a DPPC that was renamed in the simulation. NEW is a Martini 3 "
+            "name and is also used in the output. Repeat for more lipids."
         ),
     )
     parser.add_argument(
@@ -135,6 +151,15 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"memback {__version__}",
     )
     return parser
+
+
+def parse_rename(value: str):
+    """'OLD=NEW' -> (OLD, NEW), for --rename."""
+    old, sep, new = value.partition("=")
+    old, new = old.strip(), new.strip()
+    if not sep or not old or not new or "=" in new:
+        raise argparse.ArgumentTypeError(f"expected OLD=NEW, got {value!r}")
+    return old, new
 
 
 def resolve_device(choice: str):
@@ -205,6 +230,38 @@ def missing_mapping_message(resnames, input_path, extension=None) -> str:
     return "\n".join(lines)
 
 
+def bead_mismatch_message(mismatches, input_path) -> str:
+    """Explain which residues have beads that do not match their .map entry."""
+    lines = [f"error: bead names in {input_path} do not match the MemBack map:"]
+    for m in mismatches:
+        name = m["resname"]
+        if m["mapped_as"] != name:
+            name += f" (read as {m['mapped_as']})"
+        lines += [
+            "",
+            f"  [{name}] {m['n_residues']} residue(s), e.g. resid {m['example_resid']}",
+            f"    input beads : {' '.join(m['input_beads'])}",
+            f"    map beads   : {' '.join(m['map_beads'])}",
+        ]
+        if m["missing"]:
+            lines.append(f"    missing     : {' '.join(m['missing'])}")
+        if m["duplicated"]:
+            lines.append(f"    duplicated  : {' '.join(m['duplicated'])}")
+        if m["order_wrong"]:
+            lines.append("    order       : same beads as the map, but in a different order")
+        if m["candidates"]:
+            lines.append(f"    the input beads match the map(s) of: {', '.join(m['candidates'])}")
+    lines += [
+        "",
+        "Residue names select the map, so a renamed lipid is backmapped as another one.",
+        "Read them as the right lipid with --rename OLD=NEW (e.g. --rename POP1=DPPC),",
+        "put the beads in the map order, or provide a matching map for this residue",
+        "name with -e (check it with memback check_maps -e DIR). These residues are",
+        "not skipped by --skip-missing.",
+    ]
+    return "\n".join(lines)
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     # Subcommands are dispatched by hand so that `memback <input>` keeps working
@@ -228,7 +285,7 @@ def main(argv=None) -> int:
     # Imported late so that --help and --version stay fast and do not require
     # torch to be importable.
     from memback.config import check_data_files, model_path as default_model_path
-    from memback.pipeline import MissingMappingError, backmapping
+    from memback.pipeline import BeadMismatchError, MissingMappingError, backmapping
 
     missing = check_data_files()
     if missing:
@@ -253,6 +310,8 @@ def main(argv=None) -> int:
     print(f"  output     {output}")
     print(f"  model      {model}")
     print(f"  device     {describe_device(device)}")
+    if args.rename:
+        print(f"  rename     {', '.join(f'{old}={new}' for old, new in args.rename)}")
     if args.extension:
         print(f"  extension  {args.extension}")
     print()
@@ -266,9 +325,12 @@ def main(argv=None) -> int:
             # "auto" lets the pipeline fall back to the CPU if the GPU is full.
             device="auto" if args.device == "auto" else device,
             skip_missing=args.skip_missing,
+            rename=dict(args.rename),
         )
     except MissingMappingError as err:
         raise SystemExit(missing_mapping_message(err.resnames, args.input, args.extension))
+    except BeadMismatchError as err:
+        raise SystemExit(bead_mismatch_message(err.mismatches, args.input))
 
     print()
     print(f"Done. Source your preferred GROMACS version. Later, minimise and equilibrate before production MD:")

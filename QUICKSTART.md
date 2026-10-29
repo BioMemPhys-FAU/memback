@@ -79,6 +79,9 @@ continuing.
     -e DIR, --extension DIR    folder with extra .map/.bnd/.itp files
                                for lipids not built in
     -m CKPT, --model CKPT      alternative model checkpoint
+    --rename OLD=NEW           read residues named OLD as the Martini 3
+                               lipid NEW, e.g. --rename POP1=DPPC
+                               (repeat for more lipids)
     --device auto|cpu|cuda     default: auto
     -V, --version              print version and exit
 
@@ -131,6 +134,13 @@ follow PyCGTOOL conventions; see "Extending to new lipids" in README.md.
   "error: no mapping for residue(s) ..."
       That lipid is not built in; run the printed memback create_map
       commands and add it with -e (see section 6), or use --skip-missing.
+
+  "error: bead names in ... do not match the MemBack map"
+      MemBack picks a lipid's map by its residue name, so a renamed lipid
+      (e.g. a DPPC saved as POP1, which is the Martini 3 name of a PI
+      lipid) is caught by the bead check. Rerun with --rename OLD=NEW,
+      using one of the lipids the error lists as matching:
+          memback membrane_cg.gro --rename POP1=DPPC
 
   "MemBack data files are missing"
       Incomplete install, or MEMBACK_ROOT points to the wrong place.
