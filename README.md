@@ -1,4 +1,4 @@
-<p align="center"> <img src="docs/memback_overview.png" alt="MemBack: coarse-grained Martini 3 membranes are converted to atomistic lipid structures by an equivariant graph network, followed by automated hydrogen placement, solvent and ion conversion, stereochemical correction and clash resolution." width="820"> </p>
+<p align="center"> <img src="https://raw.githubusercontent.com/BioMemPhys-FAU/memback/main/docs/memback_overview.png" alt="MemBack: coarse-grained Martini 3 membranes are converted to atomistic lipid structures by an equivariant graph network, followed by automated hydrogen placement, solvent and ion conversion, stereochemical correction and clash resolution." width="820"> </p>
 
 # MemBack
 [//]: # (Badges)
@@ -212,7 +212,7 @@ so the corrected structure must be relaxed before it is simulated further.
 ## Command-line options
 
 ```
-memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--rename OLD=NEW] [--device {auto,cpu,cuda}] [-V] input
+memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--rename OLD=NEW] [--prot-back CG2AT [--prot-back-args ARGS]] [--device {auto,cpu,cuda}] [-V] input
 ```
 
 | Option | Meaning                                                                                                                                                                           |
@@ -223,6 +223,8 @@ memback [-h] [-o DIR] [-e DIR] [-m CKPT] [--skip-missing] [--rename OLD=NEW] [--
 | `-m`, `--model CKPT` | Alternative checkpoint. Default is the version in `model/`.                                                                                                                       |
 | `--skip-missing` | Leave out residues that have no mapping. Without it MemBack stops on them and suggests `memback create_map` commands. Water (`W`) and ions (`ION`) are always handled separately. |
 | `--rename OLD=NEW` | Read residues named `OLD` as the Martini 3 lipid `NEW`, e.g. `--rename POP1=DPPC`. Repeat for more lipids. See [Renamed lipids](#renamed-lipids). |
+| `--prot-back CG2AT` | Temporary: backmap the protein with this CG2AT2 executable and merge it into the output. See [Proteins](#proteins-temporary-via-cg2at2). |
+| `--prot-back-args ARGS` | Extra CG2AT2 arguments as one quoted string; they override the defaults. |
 | `--device` | `auto` (default), `cpu`, or `cuda`. `cuda` errors out if no GPU is visible. `auto` uses CUDA when visible and continues on the CPU if the GPU has no free memory.                |
 | `-V`, `--version` | Print version and exit.                                                                                                                                                           |
 
@@ -511,6 +513,25 @@ depends on module paths.
 150 lipid types across PC, PE, PS, PG, PA, PI, SM, cardiolipin and cholesterol
 head groups, with 440 CHARMM lipid topologies available for the topology step.
 Anything else needs an extension folder.
+
+### Proteins (temporary, via CG2AT2)
+
+MemBack does not backmap proteins yet. Until it does, `--prot-back` hands the
+protein beads to [CG2AT2](https://github.com/pstansfeld/cg2at) (install it
+separately, usable in same Python environment with `MemBack`) while MemBack backmaps the lipids, water and ions:
+
+```bash
+memback membrane_cg.gro --prot-back cg2at
+memback membrane_cg.gro --prot-back /path/to/cg2at --prot-back-args "-fg martini_2-2_charmm36"
+```
+
+CG2AT2 runs with `-ff charmm36-cg2at -fg martini_3-0_charmm36 -w tip3p -o none
+-silent`; `--prot-back-args` overrides any of these. The protein is placed first
+in `backmapped_ordered.gro`, and its topology goes into `toppar/PROTEIN_*.itp`,
+`topol.top` and the `MEMB` group of `index.ndx`. The protein is restrained during
+minimisation and equilibration through CG2AT2's `POSRES` file. The CG2AT2 run
+and its log are kept in `<output>/protein_cg2at/`. Please cite [CG2AT2](https://doi.org/10.1021/acs.jctc.1c00295) if you use
+this option.
 
 ## Troubleshooting
 

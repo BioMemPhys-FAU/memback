@@ -82,6 +82,10 @@ continuing.
     --rename OLD=NEW           read residues named OLD as the Martini 3
                                lipid NEW, e.g. --rename POP1=DPPC
                                (repeat for more lipids)
+    --prot-back CG2AT          temporary: backmap the protein with CG2AT2
+                               (installed separately); MemBack does the rest
+    --prot-back-args "ARGS"    extra CG2AT2 arguments, e.g.
+                               "-fg martini_2-2_charmm36"
     --device auto|cpu|cuda     default: auto
     -V, --version              print version and exit
 
